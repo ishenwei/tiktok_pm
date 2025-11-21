@@ -33,7 +33,7 @@ SECRET_KEY = 'django-insecure-^#h*@eehfevm+vcgoxuae460c!i5&or@sn@7!glhmip#hv(bbn
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'ishenwei.online,192.168.3.47,localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -130,6 +130,12 @@ DATABASES = {
         }
     }
 }
+
+# 从环境变量读取信任的来源列表
+CSRF_TRUSTED_ORIGINS = os.environ.get(
+    'CSRF_TRUSTED_ORIGINS',
+    'http://127.0.0.1' # 默认值，至少包含本地
+).split(',')
 
 
 # Password validation
