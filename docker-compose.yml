@@ -1,0 +1,53 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  # 1. Django 应用服务 (Web)
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tiktok_pm_web
+
+    # 容器启动时执行的命令 (与 Dockerfile CMD 一致，但这里是为了明确)
+    command: gunicorn tiktok_pm_project.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
+
+    # 卷映射：将本地静态文件和媒体文件卷挂载到容器的对应路径
+    volumes:
+      # ⚠️ 生产环境建议移除代码映射 (. :/app)，只在开发环境使用。
+      # 在生产环境，代码应该在构建镜像时复制 (COPY . /app/)。
+      # 仅映射数据卷：
+      - static_volume:/app/staticfiles
+      - media_volume:/app/mediafiles
+
+    expose:
+      - 8000 # 仅暴露给 Nginx 容器访问
+
+    # 从 .env 文件读取环境变量（包括 MySQL 和 Django SECRET_KEY）
+    env_file:
+      - .env
+
+  # 2. Nginx 反向代理和静态文件服务
+  nginx:
+    image: nginx:latest
+    container_name: tiktok_pm_nginx
+
+    # 端口映射：宿主机的 8888 端口映射到容器的 80 端口
+    ports:
+      - "8888:80"
+
+    # 卷映射：
+    volumes:
+      # 导入 Nginx 配置文件
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # 将 Web 容器生成的静态文件和媒体文件共享给 Nginx
+      - static_volume:/app/staticfiles
+      - media_volume:/app/mediafiles
+
+    depends_on:
+      - web # 确保 web 服务先启动
+
+# Docker 卷定义：用于持久化静态文件和媒体文件
+volumes:
+  static_volume:
+  media_volume:

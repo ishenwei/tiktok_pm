@@ -1,0 +1,21 @@
+# .dockerignore
+# 忽略 Git 自身文件
+.git
+.gitignore
+
+# 忽略本地开发环境
+__pycache__
+*.pyc
+venv/
+.idea/
+.vscode/
+
+# 忽略本地数据库文件
+db.sqlite3
+
+# 忽略日志和本地媒体文件
+logs/
+mediafiles/
+
+# 忽略敏感配置文件（如果 .env 包含在内）
+# 注意：我们使用 .env 传参，确保它在本地不被提交到 Git，但会被 Docker Compose 使用
