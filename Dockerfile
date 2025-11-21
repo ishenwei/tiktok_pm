@@ -14,10 +14,9 @@ WORKDIR /app
 
 # 1. 复制依赖文件并安装依赖
 COPY requirements.txt /app/
-# 安装依赖时，先安装编译工具和 MariaDB 客户端开发库
+# 关键修正：新增 libmariadb-dev-compat，提供必要的兼容性链接。
 RUN apt-get update \
-    # 修正：使用 libmariadb-dev 替代 libmysqlclient-dev
-    && apt-get install -y libmariadb-dev build-essential \
+    && apt-get install -y libmariadb-dev libmariadb-dev-compat build-essential \
     && pip install --no-cache-dir -r requirements.txt \
     # 移除编译工具和清理
     && apt-get remove --purge -y build-essential \
