@@ -13,13 +13,14 @@ ENV DJANGO_SETTINGS_MODULE=tiktok_pm_project.settings
 WORKDIR /app
 
 # 1. 复制依赖文件并安装依赖
-# 使用了 mysqlclient，确保您已经安装了必要的系统依赖
 COPY requirements.txt /app/
-# 安装依赖时，需要先安装 mysqlclient 的依赖包
+# 安装依赖时，先安装编译和 MySQL 客户端依赖
 RUN apt-get update \
-    && apt-get install -y default-libmysqlclient-dev gcc \
+    # 修正使用 libmysqlclient-dev 和 build-essential
+    && apt-get install -y libmysqlclient-dev build-essential \
     && pip install --no-cache-dir -r requirements.txt \
-    && apt-get remove --purge -y gcc \
+    # 移除编译工具和清理
+    && apt-get remove --purge -y build-essential \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
