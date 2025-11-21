@@ -134,7 +134,7 @@ DATABASES = {
 # 从环境变量读取信任的来源列表
 CSRF_TRUSTED_ORIGINS = os.environ.get(
     'CSRF_TRUSTED_ORIGINS',
-    'http://127.0.0.1' # 默认值，至少包含本地
+    'default-fail' # 默认值，至少包含本地
 ).split(',')
 
 
