@@ -6,3 +6,4 @@ djangorestframework==3.16.1
 PyMySQL==1.1.0
 sqlparse==0.5.3
 tzdata==2025.2
+python-dotenv
