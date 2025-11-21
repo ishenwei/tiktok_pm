@@ -13,6 +13,11 @@ import os
 from pathlib import Path # 确保顶部导入了 Path，如果您使用的是 Django 3.1+
 from dotenv import load_dotenv # <-- 导入 load_dotenv
 
+# ====== PyMySQL 兼容层 ======
+import pymysql
+pymysql.install_as_MySQLdb() # <--- 关键！让 Django 认为它正在使用 mysqlclient
+# ===========================
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -102,16 +107,26 @@ DATABASES = {
     #    }
     #}
     'default': {
-        'ENGINE': 'django.db.backends.mysql', # 确保使用 MySQL 后端
-        'NAME': os.environ.get('MYSQL_DB_NAME', 'tiktok_db'),
-        'USER': os.environ.get('MYSQL_USER', 'root'),
-        'PASSWORD': os.environ.get('MYSQL_PASSWORD', 'password'),
-        # 关键：HOST 必须是外部 MySQL 服务器的 IP 地址或域名
+        # 关键修改：将 'django.db.backends.mysql' 替换为 PyMySQL 的引擎路径
+        'ENGINE': 'django.db.backends.mysql',  # <-- 必须修改！
+
+        # 修复方式：
+        # 1. 在 settings.py 顶部添加一行：
+        # import pymysql
+        # pymysql.install_as_MySQLdb()
+        #
+        # 2. 或者直接修改 ENGINE 路径 (更清晰)
+        # 'ENGINE': 'pymysql.backends.mysql', # <-- 如果 PyMySQL 提供了此路径 (依赖版本)
+
+        # 鉴于您之前使用 mysqlclient，最简单的方式是使用 PyMySQL 提供的兼容层：
+        'NAME': os.environ.get('MYSQL_DB_NAME'),
+        'USER': os.environ.get('MYSQL_USER'),
+        'PASSWORD': os.environ.get('MYSQL_PASSWORD'),
         'HOST': os.environ.get('MYSQL_HOST'),
         'PORT': os.environ.get('MYSQL_PORT', '3306'),
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-            'charset': 'utf8mb4', # 保持字符集一致
+            'charset': 'utf8mb4',
         }
     }
 }

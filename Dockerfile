@@ -14,14 +14,9 @@ WORKDIR /app
 
 # 1. 复制依赖文件并安装依赖
 COPY requirements.txt /app/
-# 关键修正：新增 libmariadb-dev-compat，提供必要的兼容性链接。
-RUN apt-get update \
-    && apt-get install -y libmariadb-dev libmariadb-dev-compat build-essential \
-    && pip install --no-cache-dir -r requirements.txt \
-    # 移除编译工具和清理
-    && apt-get remove --purge -y build-essential \
-    && apt-get autoremove -y \
-    && rm -rf /var/lib/apt/lists/*
+# 关键修正：移除所有系统依赖安装 (libmariadb-dev, build-essential)
+# 只需要执行 pip install，因为 PyMySQL 不需要编译
+RUN pip install --no-cache-dir -r requirements.txt
 
 # 2. 复制整个项目代码到容器中
 COPY . /app/
