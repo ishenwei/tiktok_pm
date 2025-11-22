@@ -14,20 +14,13 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-
+# [您的项目名]/urls.py (tiktok_pm_project/urls.py)
+# tiktok_pm_project/urls.py (推荐的修复方案)
 from django.contrib import admin
 from django.urls import path, include
-# 导入 csrf_exempt 装饰器
-from django.views.decorators.csrf import csrf_exempt
 
 urlpatterns = [
-    # 1. 对 admin 禁用 CSRF 保护
-    path('admin/', csrf_exempt(admin.site.urls)),
-
-    # 将所有 API 路由包含进来
+    path('admin/', admin.site.urls), # <--- 保持默认，不要包装！
     path('api/', include('products.urls')),
-
-    # 2. 对 DRF 认证路由禁用 CSRF 保护
-    # 注意：我们必须对 include() 结果进行包装
-    path('api-auth/', csrf_exempt(include('rest_framework.urls', namespace='rest_framework'))),
+    path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 ]
