@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
 from pathlib import Path # 确保顶部导入了 Path，如果您使用的是 Django 3.1+
+
+from django.conf.locale import tk
 from dotenv import load_dotenv # <-- 导入 load_dotenv
 
 # ====== PyMySQL 兼容层 ======
@@ -137,6 +139,8 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost',
     'http://192.168.3.47', # 您的 IP
     'http://192.168.3.47:8888', # 您的 IP 和端口
+    'http://tk.ishenwei.online',
+    'https://tk.ishenwei.online'
 ]
 
 
