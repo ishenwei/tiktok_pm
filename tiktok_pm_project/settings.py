@@ -60,8 +60,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    #  禁用CSRF (Cross-Site Request Forgery) 保护
-    #'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -133,10 +132,17 @@ DATABASES = {
 }
 
 # 从环境变量读取信任的来源列表
-#CSRF_TRUSTED_ORIGINS = os.environ.get(
-#    'CSRF_TRUSTED_ORIGINS',
-#    'http://127.0.0.1' # 默认值，至少包含本地
-#).split(',')
+CSRF_TRUSTED_ORIGINS = [
+    'http://127.0.0.1',
+    'http://localhost',
+    # 强制信任您的访问 IP 和端口
+    'http://192.168.3.47:8888',
+    'http://192.168.3.47',
+
+    # 使用通配符（*）匹配协议和端口，确保灵活性
+    'https://192.168.3.47',
+    'https://192.168.3.47:8888',
+]
 
 
 # Password validation
