@@ -14,13 +14,20 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.contrib import admin
 from django.urls import path, include
+# 导入 csrf_exempt 装饰器
+from django.views.decorators.csrf import csrf_exempt
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    # 1. 对 admin 禁用 CSRF 保护
+    path('admin/', csrf_exempt(admin.site.urls)),
+
     # 将所有 API 路由包含进来
-    path('api/', include('products.urls')),  # <-- 新增 API 入口
-    # 如果需要，可以添加 DRF 默认的登录/认证页面
-    path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+    path('api/', include('products.urls')),
+
+    # 2. 对 DRF 认证路由禁用 CSRF 保护
+    # 注意：我们必须对 include() 结果进行包装
+    path('api-auth/', csrf_exempt(include('rest_framework.urls', namespace='rest_framework'))),
 ]
