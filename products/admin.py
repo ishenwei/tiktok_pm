@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 # Register your models here.
-
+from django.urls import path
 from django.contrib import admin
 # --- 导入富文本字段 ---
 from tinymce.widgets import TinyMCE
@@ -17,6 +17,8 @@ from .models import (
     ProductVariation,
     ProductReview
 )
+# --- 产品抓取 ---
+from .views import product_fetch_view
 
 # ----------------------------------------------------------------------
 # 核心类: 定义富文本表单 (用于 ProductAdmin)
@@ -51,12 +53,12 @@ class ProductImageInline(admin.TabularInline):
 
     def image_preview(self, obj):
         """生成图片预览，并添加 JavaScript 点击事件支持"""
-        if obj.zipline_url:
+        if obj.original_url:
             # 不再使用 <a> 标签，而是使用带 data 属性的 <img> 标签
             return mark_safe(f'''
                 <img 
-                    src="{obj.zipline_url}" 
-                    data-large-url="{obj.zipline_url}" 
+                    src="{obj.original_url}" 
+                    data-large-url="{obj.original_url}" 
                     class="image-clickable" 
                     style="max-width: 100px; max-height: 100px; cursor: pointer;" 
                     title="点击查看大图"
@@ -93,12 +95,12 @@ class ProductVariationInline(admin.TabularInline):
 
     def image_preview(self, obj):
         """根据 image_zipline_url 生成图片预览，并添加 JavaScript 点击事件支持"""
-        if obj.image_zipline_url:
+        if obj.image_original_url:
             # 不再使用 <a> 标签
             return mark_safe(f'''
                 <img 
-                    src="{obj.image_zipline_url}" 
-                    data-large-url="{obj.image_zipline_url}" 
+                    src="{obj.image_original_url}" 
+                    data-large-url="{obj.image_original_url}" 
                     class="image-clickable"
                     style="max-width: 100px; max-height: 100px; cursor: pointer;" 
                     title="点击查看大图"
@@ -134,6 +136,8 @@ class ProductReviewInline(admin.TabularInline):
     #     models.TextField: {'widget': forms.Textarea(attrs={'rows': 2, 'cols': 50})}
     # }
 
+
+
 # ----------------------------------------------------------------------
 # 核心类: 定制 Product 模型的管理界面 (CRUD)
 # ----------------------------------------------------------------------
@@ -160,7 +164,7 @@ class ProductAdmin(admin.ModelAdmin):
     # ------------------------------------------------------------
     def product_thumbnail(self, obj):
         """显示产品的第一张图片缩略图，并应用点击放大 JS 样式"""
-        img_url = obj.first_image_zipline_url  # 调用 models.py 中定义的属性
+        img_url = obj.first_image_original_url  # 调用 models.py 中定义的属性
 
         if img_url:
             # 使用我们在 Admin 中定义的图片点击放大样式 (class="image-clickable")
@@ -281,6 +285,17 @@ class ProductAdmin(admin.ModelAdmin):
 
     # 3. 不允许修改的字段
     readonly_fields = ('source_id', 'created_at', 'updated_at')
+
+    # =========================================================
+    # 产品抓取定制页
+    # =========================================================
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            # 新增 /admin/product_fetch/ 路径
+            path('product_fetch/', self.admin_site.admin_view(product_fetch_view), name='product_fetch'),
+        ]
+        return custom_urls + urls
 
 
 # ----------------------------------------------------------------------

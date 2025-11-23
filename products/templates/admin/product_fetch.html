@@ -1,0 +1,34 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block content %}
+<div id="content-main">
+    <form action="" method="post">
+        {% csrf_token %}
+        <fieldset class="module">
+            <h2>{% translate "TikTok 产品数据抓取" %}</h2>
+            <div class="form-row">
+                <p>{% translate "请输入要触发 Bright Data 抓取的 TikTok 产品 URL 列表。" %}</p>
+
+                {# 渲染表单字段，它将被定义为 Textarea #}
+                {% if form %}
+                    {% for field in form %}
+                        <div class="fieldWrapper">
+                            {{ field.errors }}
+                            {{ field.label_tag }}
+                            {{ field }} {# 渲染为 Textarea #}
+                            {% if field.help_text %}
+                            <p class="help">{{ field.help_text }}</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </fieldset>
+
+        <div class="submit-row">
+            <input type="submit" value="{% translate '提交任务并开始抓取' %}" name="_start" />
+        </div>
+    </form>
+</div>
+{% endblock %}

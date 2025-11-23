@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'rest_framework',  # DRF (用于API)
     # 富文本编辑器
     'tinymce',         # 富文本编辑器
+    'django_q',
     # 您的应用
     'products',  # 注册您的产品应用
     # API 过滤
@@ -116,9 +117,9 @@ DATABASES = {
         # 1. 在 settings.py 顶部添加一行：
         # import pymysql
         # pymysql.install_as_MySQLdb()
-        #
+        #S
         # 2. 或者直接修改 ENGINE 路径 (更清晰)
-        # 'ENGINE': 'pymysql.backends.mysql', # <-- 如果 PyMySQL 提供了此路径 (依赖版本)
+        #'ENGINE': 'pymysql.backends.mysql', # <-- 如果 PyMySQL 提供了此路径 (依赖版本)
 
         # 鉴于您之前使用 mysqlclient，最简单的方式是使用 PyMySQL 提供的兼容层：
         'NAME': os.environ.get('MYSQL_DB_NAME'),
@@ -142,6 +143,22 @@ CSRF_TRUSTED_ORIGINS = [
     'http://tk.ishenwei.online',
     'https://tk.ishenwei.online'
 ]
+
+# Django-Q 配置，并使用 Redis 或您的数据库作为任务后端（假设使用数据库）
+
+Q_CLUSTER = {
+    'name': 'DjangOQ_Single',
+    'workers': 1,  # 🌟 关键：只运行一个 Worker 🌟
+    'timeout': 180,  # 延长超时时间以应对网络延迟
+    'retry': 300,
+    'compress': True,
+    'save_limit': 250,
+    'queue_limit': 500,
+    'orm': 'default',
+    'catch_up': False,
+    'default_queue': 'default',
+}
+
 
 
 # Password validation
@@ -205,3 +222,26 @@ STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # 如果使用的是 Path：
 # STATIC_ROOT = Path(BASE_DIR) / 'staticfiles'
+
+# -------------------------------------------------------------
+# 产品导入自定义配置
+# -------------------------------------------------------------
+
+# 决定是否启用图片下载和上传到 Zipline 服务。
+# True: 调用 Zipline 上传服务，将返回的新 URL 存入数据库。
+# False: 仅保留产品数据中的原始图片 URL。
+IMAGE_DOWNLOAD_FLAG = False
+# 或者
+# IMAGE_DOWNLOAD_FLAG = False
+
+
+# ==========================================================
+# Bright Data / Zipline 配置 (从环境变量读取)
+# ==========================================================
+
+BRIGHT_DATA_API_KEY = os.environ.get('BRIGHT_DATA_API_KEY')
+BRIGHT_DATA_DATASET_ID = os.environ.get('BRIGHT_DATA_DATASET_ID')
+
+# Zipline 配置
+ZIPLINE_UPLOAD_URL = os.environ.get('ZIPLINE_UPLOAD_URL')
+ZIPLINE_API_KEY = os.environ.get('ZIPLINE_API_KEY')

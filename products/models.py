@@ -102,6 +102,25 @@ class Product(models.Model):
         return f"{self.source_id}: {self.title[:50]}..."
 
     # ------------------------------------------------------------
+    # 新增属性：获取第一张图片的 Original URL (用于列表页展示)
+    # ------------------------------------------------------------
+    @property
+    def first_image_original_url(self):
+        """返回关联的第一张图片的加速 URL，如果存在的话。"""
+        # 由于我们在 ProductImage 模型中使用了 related_name='product_images' (假设如此)
+        # 我们按 id 或某个顺序字段获取第一张图片
+        first_image = self.product_images.filter(image_type='main').order_by('id').first()
+        if first_image and first_image.original_url:
+            return first_image.original_url
+
+        # 如果没有找到 'main' 类型的图片，尝试找任意一张
+        first_image = self.product_images.order_by('id').first()
+        if first_image and first_image.original_url:
+            return first_image.original_url
+
+        return None
+
+    # ------------------------------------------------------------
     # 新增属性：获取第一张图片的 Zipline URL (用于列表页展示)
     # ------------------------------------------------------------
     @property
