@@ -25,10 +25,6 @@ services:
     env_file:
       - .env
 
-    # 确保数据库启动
-    depends_on:
-      - db # 假设 db 服务存在
-
   # 2. Nginx 反向代理和静态文件服务
   nginx:
     image: nginx:latest
