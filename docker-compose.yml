@@ -15,8 +15,6 @@ services:
       - .:/app  # 假设 WORKDIR 为 /app
       - static_volume:/app/staticfiles
       - media_volume:/app/mediafiles
-      # 🌟 挂载 Python 补丁 🌟
-      - ./patches/django_q/core_signing.py:/usr/local/lib/python3.12/site-packages/django_q/core_signing.py
 
     command: gunicorn tiktok_pm_project.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
 
@@ -46,8 +44,6 @@ services:
     # 🌟 恢复代码映射，以便执行 manage.py qcluster 🌟
     volumes:
       - .:/app # 假设 WORKDIR 为 /app
-      # 🌟 挂载 Python 补丁 🌟
-      - ./patches/django_q/core_signing.py:/usr/local/lib/python3.12/site-packages/django_q/core_signing.py
 
     # 🌟 添加环境变量 🌟
     env_file:
