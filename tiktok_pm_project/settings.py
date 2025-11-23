@@ -93,22 +93,6 @@ WSGI_APPLICATION = 'tiktok_pm_project.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-#    'default': {
-#        'ENGINE': 'django.db.backends.sqlite3',
-#        'NAME': BASE_DIR / 'db.sqlite3',
-#    }
-    #'default': {
-    #    'ENGINE': 'django.db.backends.mysql',  # 数据库引擎
-    #    'NAME': 'tiktok_products',          # 您的数据库名称 (需提前创建)
-    #    'USER': 'root',            # 您的MySQL用户名
-    #    'PASSWORD': 'abcd1234',    # 您的MySQL密码
-    #    'HOST': '192.168.3.17',                  # 数据库地址
-    #    'PORT': '3306',                       # 数据库端口
-    #    'OPTIONS': {
-    #        'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-    #        'charset': 'utf8mb4',             # 确保支持emoji和复杂字符
-    #    }
-    #}
     'default': {
         # 关键修改：将 'django.db.backends.mysql' 替换为 PyMySQL 的引擎路径
         'ENGINE': 'django.db.backends.mysql',  # <-- 必须修改！
@@ -149,7 +133,7 @@ CSRF_TRUSTED_ORIGINS = [
 Q_CLUSTER = {
     'name': 'DjangOQ_Single',
     'workers': 1,  # 🌟 关键：只运行一个 Worker 🌟
-    'timeout': 180,  # 延长超时时间以应对网络延迟
+    'timeout': 1800,  # 延长超时时间以应对网络延迟 设置为 30 分钟 (1800 秒)
     'retry': 300,
     'compress': True,
     'save_limit': 250,
@@ -232,8 +216,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # False: 仅保留产品数据中的原始图片 URL。
 IMAGE_DOWNLOAD_FLAG = False
 # 或者
-# IMAGE_DOWNLOAD_FLAG = False
-
+# IMAGE_DOWNLOAD_FLAG = True
 
 # ==========================================================
 # Bright Data / Zipline 配置 (从环境变量读取)
