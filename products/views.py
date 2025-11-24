@@ -72,6 +72,22 @@ class ProductVariationViewSet(viewsets.ModelViewSet):
 # 1. 定义表单 (使用 Textarea 控件)
 # ----------------------------------------------------
 class ProductUrlsForm(forms.Form):
+    # 定义模式选项
+    MODE_CHOICES = [
+        ('url', '1. Collect by URL (单个产品链接)'),
+        ('category', '2. Discover by Category (单个分类链接)'),
+        ('shop', '3. Discover by Shop (单个店铺链接)'),
+        ('keyword', '4. Discover by Keyword (单个关键词)'),
+    ]
+
+    # 🌟 新增 collection_mode 字段 🌟
+    collection_mode = forms.ChoiceField(
+        label="选择采集方式",
+        choices=MODE_CHOICES,
+        widget=forms.RadioSelect,  # 使用 RadioSelect 渲染为单选按钮
+        initial='url'
+    )
+
     product_urls = forms.CharField(
         label="产品 URL 列表",
         widget=forms.Textarea(attrs={'rows': 10, 'placeholder': '一行一个 TikTok 产品 URL'}),
@@ -109,6 +125,8 @@ def product_fetch_view(request):
         if form.is_valid():
             # 获取清理后的 URL 列表
             urls_list = form.cleaned_data['product_urls']
+            collection_mode = form.cleaned_data['collection_mode']
+            print("collection_mode: ", collection_mode)
 
             # ----------------------------------------------------
             # 🌟 核心操作：将 URL 列表传递给异步任务
@@ -116,7 +134,7 @@ def product_fetch_view(request):
             # 注意: trigger_bright_data_task 的签名必须接受这个列表作为参数
             async_task(
                 trigger_bright_data_task,
-                urls_list,  # 传递 URL 列表
+                urls_list, collection_mode, # 传递 URL 列表
                 hook='products.tasks.log_task_completion',
             )
 

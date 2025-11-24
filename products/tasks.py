@@ -20,13 +20,14 @@ RETRY_DELAY = 60   # 重新轮询的间隔（秒）
 #
 # 任务 B (poll_bright_data_result): 检查状态，如果未完成，再次调度任务 B (实现循环)。
 # --------------------------
-def trigger_bright_data_task(urls):
+def trigger_bright_data_task(urls, collection_mode):
     # ... (构造 payload 和 headers 的代码不变) ...
 
     # 1. 构造 JSON Payload
     payload = {
         "input": [{"url": u} for u in urls]
     }
+    print(f"payload: {payload}")
 
     # 2. 构造 HTTP 请求头
     headers = {
@@ -34,9 +35,28 @@ def trigger_bright_data_task(urls):
         "Content-Type": "application/json"
     }
 
+    base_trigger_url = settings.BRIGHT_DATA_BASE_TRIGGER_URL
+    final_trigger_url = base_trigger_url  # 初始化为基础URL
+
+    # 只有非 'url' 模式才需要添加额外的发现参数和限制参数
+    if collection_mode == 'category':
+        # 注意：这里假设 BRIGHT_DATA_BASE_TRIGGER_URL 不以 ? 结尾，
+        # 且 DISCOVER_BY_CATEGORY 以 & 开头或包含所有必要的参数。
+        final_trigger_url += f"{settings.BRIGHT_DATA_DISCOVER_TYPE}{settings.BRIGHT_DATA_DISCOVER_BY_CATEGORY}{settings.BRIGHT_DATA_PARAM_LIMIT_PER_INPUT}"
+
+    elif collection_mode == 'shop':
+        final_trigger_url += f"{settings.BRIGHT_DATA_DISCOVER_TYPE}{settings.BRIGHT_DATA_DISCOVER_BY_SHOP}{settings.BRIGHT_DATA_PARAM_LIMIT_PER_INPUT}"
+
+    elif collection_mode == 'keyword':
+        final_trigger_url += f"{settings.BRIGHT_DATA_DISCOVER_TYPE}{settings.BRIGHT_DATA_DISCOVER_BY_KEYWORD}{settings.BRIGHT_DATA_PARAM_LIMIT_PER_INPUT}"
+
+    # 如果是 'url' 模式，final_trigger_url 保持为 base_trigger_url
+
+    # 可以在这里打印 URL 进行调试
+    print(f"Final Trigger URL: {final_trigger_url}")
     try:
         response = requests.post(
-            settings.BRIGHT_DATA_TRIGGER_URL,
+            final_trigger_url,
             headers=headers,
             data=json.dumps(payload),
             timeout=INITIAL_DELAY

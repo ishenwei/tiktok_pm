@@ -15,10 +15,23 @@
                     {% for field in form %}
                         <div class="fieldWrapper">
                             {{ field.errors }}
-                            {{ field.label_tag }}
-                            {{ field }} {# 渲染为 Textarea #}
-                            {% if field.help_text %}
-                            <p class="help">{{ field.help_text }}</p>
+
+                            {# 🌟 关键：对 RadioSelect 的特殊处理 🌟 #}
+                            {% if field.name == 'collection_mode' %}
+                                <div class="field-box">
+                                    {{ field.label_tag }}
+                                    <div class="related-widget-wrapper">
+                                        {{ field }} {# 渲染为 ul/li 的 RadioSelect #}
+                                        {# 移除原来的 <p> 标签，使用 help_text #}
+                                    </div>
+                                </div>
+                            {% else %}
+                                {# 渲染其他字段 (product_urls) #}
+                                {{ field.label_tag }}
+                                {{ field }}
+                                {% if field.help_text %}
+                                <p class="help">{{ field.help_text }}</p>
+                                {% endif %}
                             {% endif %}
                         </div>
                     {% endfor %}
