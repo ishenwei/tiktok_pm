@@ -131,16 +131,27 @@ CSRF_TRUSTED_ORIGINS = [
 # Django-Q 配置，并使用 Redis 或您的数据库作为任务后端（假设使用数据库）
 
 Q_CLUSTER = {
-    'name': 'DjangOQ_Single',
-    'workers': 1,  # 🌟 关键：只运行一个 Worker 🌟
-    'timeout': 1800,  # 延长超时时间以应对网络延迟 设置为 30 分钟 (1800 秒)
-    'retry': 300,
-    'compress': True,
-    'save_limit': 250,
-    'queue_limit': 500,
-    'orm': 'default',
-    'catch_up': False,
-    'default_queue': 'default',
+    "name": "DjangoORM",
+    "workers": 4,               # worker 数量
+    "recycle": 500,
+    "timeout": 300,
+    "retry": 120,
+    "queue_limit": 50,
+    "bulk": 10,
+    "save_limit": 250,
+    "cpu_affinity": 1,
+
+    # ⭐ 关键：启用 ORM (MySQL/PostgreSQL) 作为队列 Broker
+    "ENGINE": "django_q.brokers.orm.OrmBroker",
+
+    # 使用 MySQL ORM broker（非常关键）
+    "orm": "default",
+
+    # 开启 Scheduler（必须，否则 delay 不工作）
+    "scheduler": True,
+
+    # 不使用单 worker 模式（Single 模式会导致无限循环）
+    "sync": False,
 }
 
 

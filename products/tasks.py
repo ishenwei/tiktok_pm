@@ -1,12 +1,13 @@
 # products/tasks.py
 import json
-import time
 import os
 import requests
 from django_q.tasks import async_task
-from .importer_wrapper import start_import_process  # 导入导入入口
+from django_q.models import Schedule
 from django.conf import settings
-
+from django.utils import timezone
+from datetime import timedelta
+from .importer_wrapper import start_import_process
 
 # 轮询任务配置
 INITIAL_DELAY = 30 # 第一次轮询延迟（秒）
@@ -48,11 +49,15 @@ def trigger_bright_data_task(urls):
         if snapshot_id:
             print(f"✅ Bright Data API 触发成功。snapshot_id: {snapshot_id}")
 
-            # 调度下一步的轮询任务
-            async_task(
-                'products.tasks.poll_bright_data_result',
-                snapshot_id,  # 唯一位置参数
-            )
+            # 第一次轮询任务（立即运行）
+            #Schedule.objects.create(
+            #    name=f"poll_{snapshot_id}",
+            #    func="products.tasks.poll_bright_data_result",
+            #    args=snapshot_id,
+            #    schedule_type=Schedule.ONCE,
+            #    next_run=timezone.now(),
+            #)
+            _schedule_delayed_poll(snapshot_id, delay_seconds=0)
             return True
         else:
             print(f"❌ Bright Data API 触发成功，但未返回 snapshot_id。响应: {response.text}")
@@ -69,84 +74,63 @@ def trigger_bright_data_task(urls):
 # ==========================================================
 # 任务：轮询 Bright Data 结果
 # ==========================================================
-def poll_bright_data_result(snapshot_id, **kwargs):
-    """
-    轮询 Bright Data 任务状态，如果完成则下载并导入数据，否则重新调度自身。
-    """
-    print(f"🔄 轮询开始: Checking status for snapshot_id: {snapshot_id}")
-
-    # 🌟 关键：定义唯一的组名 🌟
+def poll_bright_data_result(snapshot_id_list):
+    # 关键修复：从列表中取出实际的 ID 字符串
+    snapshot_id = snapshot_id_list[0]
+    print(f"🔄 轮询 snapshot_id={snapshot_id}")
 
     headers = {
         "Authorization": f"Bearer {settings.BRIGHT_DATA_API_KEY}"
     }
 
-    print(f"🔄 轮询开始: Checking status for snapshot_id: {snapshot_id}")
-    while True:
-        try:
-            # 1. 查询任务状态
-            # ... (查询状态的代码不变) ...
-            status_url = f"{settings.BRIGHT_DATA_STATUS_URL}{snapshot_id}"
-            response = requests.get(status_url, headers=headers, timeout=30)
-            response.raise_for_status()
+    try:
+        status_url = f"{settings.BRIGHT_DATA_STATUS_URL}{snapshot_id}"
+        response = requests.get(status_url, headers=headers, timeout=30)
+        response.raise_for_status()
+        status_data = response.json()
+        status = status_data.get("status")
+        print(f"   Bright Data 状态 = {status}")
 
-            status_data = response.json()
-            status = status_data.get('status')
-            print(f"   当前状态: {status}")
+        # 未完成 → 重新调度（不阻塞 worker）
+        if status in ["pending", "running", "collecting"]:
+            print("   ▶ 状态未完成，30 秒后继续轮询")
 
-            if status == 'ready':
-                # 2. 任务已完成，下载结果
-                print(f"🎉 任务完成: {snapshot_id}。开始下载数据...")
+            _schedule_delayed_poll(snapshot_id, delay_seconds=30)
+            return
 
-                # Bright Data 下载 URL
-                download_url = f"{settings.BRIGHT_DATA_DOWNLOAD_BASE_URL}{snapshot_id}?format=json"
-                print(f"🎉  开始下载:" + download_url)
-                download_response = requests.get(download_url, headers=headers, timeout=120)
-                download_response.raise_for_status()
+            return
 
-                # 假设数据是 JSON 格式（如果不是，您需要相应处理）
-                downloaded_data = download_response.json()
-                print(f"   下载 {len(downloaded_data)} 条记录。")
+        # 完成 → 下载数据
+        if status == "ready":
+            download_url = f"{settings.BRIGHT_DATA_DOWNLOAD_BASE_URL}{snapshot_id}?format=json"
+            download_response = requests.get(download_url, headers=headers, timeout=180)
+            download_response.raise_for_status()
 
+            downloaded_data = download_response.json()
+            print(f"   下载成功 {len(downloaded_data)} records")
 
-                # ========================================================
-                # 保存 JSON 到项目根目录 /data/
-                # ========================================================
-                project_root = settings.BASE_DIR           # Django 项目根目录
-                data_dir = os.path.join(project_root, "data")
-                os.makedirs(data_dir, exist_ok=True)       # 自动创建 data/ 目录
+            # 保存 JSON 文件（建议单独 async）
+            async_task(
+                "products.tasks.save_snapshot_file",
+                snapshot_id,
+                downloaded_data
+            )
 
-                save_path = os.path.join(data_dir, f"snapshot_{snapshot_id}.json")
+            # 启动导入任务（分离职责）
+            async_task(
+                "products.importer_wrapper.start_import_process",
+                downloaded_data
+            )
 
-                with open(save_path, "w", encoding="utf-8") as f:
-                    json.dump(downloaded_data, f, ensure_ascii=False, indent=2)
+            return
 
-                print(f"   ✅ JSON 已保存到: {save_path}")
-                # ========================================================
+        print(f"❌ Bright Data 返回失败状态: {status}")
 
-                # 关键：调用导入逻辑
-                try:
-                    start_import_process(downloaded_data)
-                    print("   [数据导入] 导入逻辑调用成功！")  # 临时占位符
-                except Exception as e:
-                    print(f"   ❌ 数据导入失败: {e}")
-                    return False
+    except Exception as e:
+        print(f"❌ 轮询异常: {e}")
+        # 失败也建议 30 秒后重试一次
+        _schedule_delayed_poll(snapshot_id, delay_seconds=30)
 
-                return True  # 🌟 成功，跳出循环并结束任务 🌟
-
-            elif status in ['running', 'collecting', 'pending']:
-                # 任务仍在运行，强制等待 30 秒
-                print("   任务仍在运行。强制等待 30 秒后继续轮询...")
-
-                # 🌟 核心：强制等待 30 秒 🌟
-                time.sleep(30)
-            else:
-                # 任务失败
-                print(f"❌ 任务失败。状态: {status}")
-                return False  # 失败，跳出循环并结束任务
-        except Exception as e:
-            print(f"❌ 轮询任务执行期间发生未知错误: {e}")
-            return False
 
 def log_task_completion(task):
     """
@@ -174,3 +158,44 @@ def log_task_completion(task):
     except Exception as e:
         # 如果 Hook 函数本身出错，打印日志而不是抛出异常
         print(f"❌ HOOK 自身发生错误: {e}")
+
+# ===================================================================================
+# 轮询任务延迟调度（Django-Q 2.x 正确写法）
+# ===================================================================================
+
+def _schedule_delayed_poll(snapshot_id, delay_seconds=30):
+    """
+    创建 legitimate Django-Q 2.x schedule args:
+    使用 repr(list) 确保 args 存储为 Python literal 列表。
+    """
+
+    # 删除旧任务（避免重复）
+    Schedule.objects.filter(name=f"poll_{snapshot_id}").delete()
+
+    Schedule.objects.create(
+        name=f"poll_{snapshot_id}",
+        func="products.tasks.poll_bright_data_result",
+        args=repr([snapshot_id]),   # 必须是字符串，而不是 Python object
+        schedule_type=Schedule.ONCE,
+        next_run=timezone.now() + timedelta(seconds=delay_seconds)
+    )
+
+    print(f"⏱ 已调度下一次轮询：{delay_seconds} 秒后执行")
+
+# ===================================================================================
+# 数据保存（异步任务）
+# ===================================================================================
+
+def save_snapshot_file(snapshot_id, data):
+    """
+    将 Bright Data 下载的数据保存到 /data/snapshot_xxx.json
+    """
+    data_dir = os.path.join(settings.BASE_DIR, "data")
+    os.makedirs(data_dir, exist_ok=True)
+
+    target_file = os.path.join(data_dir, f"snapshot_{snapshot_id}.json")
+
+    with open(target_file, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+    print(f"📁 JSON 文件保存成功：{target_file}")
