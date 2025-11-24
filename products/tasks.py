@@ -1,22 +1,13 @@
 # products/tasks.py
 import json
 import time
+import os
 import requests
-from datetime import datetime, timedelta
 from django_q.tasks import async_task
-from django_q.models import Task, Schedule # 🌟 确保导入 Task 🌟
-from django.conf import settings
 from .importer_wrapper import start_import_process  # 导入导入入口
+from django.conf import settings
 
-# --------------------------
-# Bright Data API URLs (固定不变，无需在 settings 中声明)
-# --------------------------
-BRIGHT_DATA_API_KEY = "011ac709c39e73762ef01946f0ca17b151e8c612e4c532e87764c23c61047ecf"
-BRIGHT_DATA_URL = "https://api.brightdata.com/datasets/v3/trigger?dataset_id=gd_m45m1u911dsa4274pi&notify=false&include_errors=true"
 
-BRIGHT_DATA_TRIGGER_URL = "https://api.brightdata.com/datasets/v3/trigger?dataset_id=gd_m45m1u911dsa4274pi&notify=false&include_errors=true"
-BRIGHT_DATA_STATUS_URL = "https://api.brightdata.com/datasets/v3/progress/"
-BRIGHT_DATA_DOWNLOAD_BASE_URL = "https://api.brightdata.com/datasets/v3/snapshot/"
 # 轮询任务配置
 INITIAL_DELAY = 30 # 第一次轮询延迟（秒）
 RETRY_DELAY = 60   # 重新轮询的间隔（秒）
@@ -38,13 +29,13 @@ def trigger_bright_data_task(urls):
 
     # 2. 构造 HTTP 请求头
     headers = {
-        "Authorization": f"Bearer {BRIGHT_DATA_API_KEY}",
+        "Authorization": f"Bearer {settings.BRIGHT_DATA_API_KEY}",
         "Content-Type": "application/json"
     }
 
     try:
         response = requests.post(
-            BRIGHT_DATA_TRIGGER_URL,
+            settings.BRIGHT_DATA_TRIGGER_URL,
             headers=headers,
             data=json.dumps(payload),
             timeout=INITIAL_DELAY
@@ -87,7 +78,7 @@ def poll_bright_data_result(snapshot_id, **kwargs):
     # 🌟 关键：定义唯一的组名 🌟
 
     headers = {
-        "Authorization": f"Bearer {BRIGHT_DATA_API_KEY}"
+        "Authorization": f"Bearer {settings.BRIGHT_DATA_API_KEY}"
     }
 
     print(f"🔄 轮询开始: Checking status for snapshot_id: {snapshot_id}")
@@ -95,7 +86,7 @@ def poll_bright_data_result(snapshot_id, **kwargs):
         try:
             # 1. 查询任务状态
             # ... (查询状态的代码不变) ...
-            status_url = f"{BRIGHT_DATA_STATUS_URL}{snapshot_id}"
+            status_url = f"{settings.BRIGHT_DATA_STATUS_URL}{snapshot_id}"
             response = requests.get(status_url, headers=headers, timeout=30)
             response.raise_for_status()
 
@@ -107,9 +98,8 @@ def poll_bright_data_result(snapshot_id, **kwargs):
                 # 2. 任务已完成，下载结果
                 print(f"🎉 任务完成: {snapshot_id}。开始下载数据...")
 
-                # Bright Data 下载 URL (通常是 snapshot_id/download)
-                #download_url = f"{BRIGHT_DATA_STATUS_URL}{snapshot_id}/download"
-                download_url = f"{BRIGHT_DATA_DOWNLOAD_BASE_URL}{snapshot_id}?format=json"
+                # Bright Data 下载 URL
+                download_url = f"{settings.BRIGHT_DATA_DOWNLOAD_BASE_URL}{snapshot_id}?format=json"
                 print(f"🎉  开始下载:" + download_url)
                 download_response = requests.get(download_url, headers=headers, timeout=120)
                 download_response.raise_for_status()
@@ -118,7 +108,23 @@ def poll_bright_data_result(snapshot_id, **kwargs):
                 downloaded_data = download_response.json()
                 print(f"   下载 {len(downloaded_data)} 条记录。")
 
-                # 🌟 关键：调用您的导入逻辑 🌟
+
+                # ========================================================
+                # 保存 JSON 到项目根目录 /data/
+                # ========================================================
+                project_root = settings.BASE_DIR           # Django 项目根目录
+                data_dir = os.path.join(project_root, "data")
+                os.makedirs(data_dir, exist_ok=True)       # 自动创建 data/ 目录
+
+                save_path = os.path.join(data_dir, f"snapshot_{snapshot_id}.json")
+
+                with open(save_path, "w", encoding="utf-8") as f:
+                    json.dump(downloaded_data, f, ensure_ascii=False, indent=2)
+
+                print(f"   ✅ JSON 已保存到: {save_path}")
+                # ========================================================
+
+                # 关键：调用导入逻辑
                 try:
                     start_import_process(downloaded_data)
                     print("   [数据导入] 导入逻辑调用成功！")  # 临时占位符
@@ -129,7 +135,6 @@ def poll_bright_data_result(snapshot_id, **kwargs):
                 return True  # 🌟 成功，跳出循环并结束任务 🌟
 
             elif status in ['running', 'collecting', 'pending']:
-                # 任务仍在运行，暂停 Worker
                 # 任务仍在运行，强制等待 30 秒
                 print("   任务仍在运行。强制等待 30 秒后继续轮询...")
 
