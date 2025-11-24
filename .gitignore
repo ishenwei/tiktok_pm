@@ -79,6 +79,7 @@ staticfiles/
 # 敏感环境变量文件 (包含数据库密码和 SECRET_KEY)
 # ⚠️ 绝对不要将此文件提交到公共 Git 仓库
 .env
+.env_prod
 .flaskenv
 .vault
 

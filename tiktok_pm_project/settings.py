@@ -251,6 +251,13 @@ BRIGHT_DATA_TRIGGER_URL = "https://api.brightdata.com/datasets/v3/trigger?datase
 BRIGHT_DATA_STATUS_URL = "https://api.brightdata.com/datasets/v3/progress/"
 BRIGHT_DATA_DOWNLOAD_BASE_URL = "https://api.brightdata.com/datasets/v3/snapshot/"
 
+BRIGHT_DATA_DISCOVER_TYPE = "&type=discover_new"
+BRIGHT_DATA_DISCOVER_BY_CATEGORY = "&discover_by=category"
+BRIGHT_DATA_DISCOVER_BY_KEYWORD = "&discover_by=keyword"
+BRIGHT_DATA_DISCOVER_BY_SHOP = "&discover_by=shop"
+
+BRIGHT_DATA_PARAM_LIMIT_PER_INPUT = "&limit_per_input=100"
+
 # Zipline 配置
 ZIPLINE_UPLOAD_URL = os.environ.get('ZIPLINE_UPLOAD_URL')
 ZIPLINE_API_KEY = os.environ.get('ZIPLINE_API_KEY')
