@@ -21,9 +21,20 @@ pymysql.install_as_MySQLdb() # <--- 关键！让 Django 认为它正在使用 my
 # ===========================
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
+# 🌟 关键修正：使用 pathlib.Path 来定义 BASE_DIR 🌟
+# 这会创建一个 Path 对象，并使其支持 / 运算符
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# 定义媒体文件（动态生成文件）的 URL 前缀
+MEDIA_URL = '/data/'
+
+# 定义媒体文件在文件系统中的根目录
+# 🌟 关键修正：确保 MEDIA_ROOT 也使用 Path 对象或显式转换为字符串 🌟
+# 由于 os.path.join() 接受 Path 对象，这里保持 MEDIA_ROOT 兼容性
+MEDIA_ROOT = BASE_DIR / 'data' # 使用 Path 对象进行拼接
+
 # 查找并加载项目根目录下的 .env 文件
+# 现在 BASE_DIR 是 Path 对象，/ 运算符可以正常工作
 load_dotenv(BASE_DIR / '.env')
 
 # Quick-start development settings - unsuitable for production

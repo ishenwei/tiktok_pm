@@ -3,6 +3,8 @@ from django.db import models
 # Create your models here.
 from django.db import models
 from django.db.models.functions import Now
+from django.conf import settings
+from .utils import json_to_html, save_html_file
 
 class Product(models.Model):
     """
@@ -25,9 +27,16 @@ class Product(models.Model):
     description = models.TextField(blank=True, null=True)
     description_1 = models.TextField(blank=True, null=True)
     description_2 = models.TextField(blank=True, null=True)
-    desc_detail = models.TextField(blank=True, null=True)
-    desc_detail_1 = models.TextField(blank=True, null=True)
-    desc_detail_2 = models.TextField(blank=True, null=True)
+
+    #desc_detail = models.TextField(blank=True, null=True)
+    #desc_detail_1 = models.TextField(blank=True, null=True)
+    #desc_detail_2 = models.TextField(blank=True, null=True)
+    desc_detail = models.JSONField(blank=True, null=True, default=list)
+    desc_detail_1 = models.JSONField(blank=True, null=True, default=list)
+    desc_detail_2 = models.JSONField(blank=True, null=True, default=list)
+
+    # 🌟 新增字段：用于存储生成的 HTML 文件的相对路径 🌟
+    desc_html_path = models.CharField(max_length=255, blank=True, null=True)
 
     # 状态字段
     available = models.BooleanField(blank=True, null=True)
@@ -138,6 +147,27 @@ class Product(models.Model):
             return first_image.zipline_url
 
         return None
+
+    def save(self, *args, **kwargs):
+        """
+                覆盖 save 方法，确保在每次保存时都重新生成 HTML 文件。
+                """
+        # 1. 在调用 super().save() 之前执行自定义逻辑
+        self._generate_html()
+
+        # 2. 调用父类的 save 方法，将对象存入数据库 (包括更新后的 desc_html_path)
+        super().save(*args, **kwargs)
+
+    def _generate_html(self):
+        """内部方法：生成并保存 HTML 文件"""
+        if self.desc_detail and self.source_id:
+            html_content = json_to_html(self.desc_detail)
+
+            # 使用 source_id 作为文件名
+            relative_path = save_html_file(self.source_id, html_content)
+
+            if relative_path:
+                self.desc_html_path = relative_path
 # ------------------------------------------------------------
 # 提示：其他关联表 (product_images, product_variations 等)
 # 需要您参照此格式，继续在 models.py 文件中创建，并设置 ForeignKey 关联。

@@ -190,10 +190,10 @@ def save_snapshot_file(snapshot_id, data):
     """
     将 Bright Data 下载的数据保存到 /data/snapshot_xxx.json
     """
-    data_dir = os.path.join(settings.BASE_DIR, "data")
-    os.makedirs(data_dir, exist_ok=True)
+    json_data_dir = os.path.join(settings.BASE_DIR, 'data', 'json')
+    os.makedirs(json_data_dir, exist_ok=True)
 
-    target_file = os.path.join(data_dir, f"snapshot_{snapshot_id}.json")
+    target_file = os.path.join(json_data_dir, f"snapshot_{snapshot_id}.json")
 
     with open(target_file, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)

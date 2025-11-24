@@ -9,7 +9,7 @@ from tinymce.widgets import TinyMCE
 from django import forms
 # --- 新增导入：用于渲染HTML ---
 from django.utils.safestring import mark_safe
-
+from django.utils.html import format_html
 from .models import (
     Product,
     ProductImage,
@@ -266,14 +266,44 @@ class ProductAdmin(admin.ModelAdmin):
             'fields': ('seller_id', 'store_name', 'shop_performance_metrics'),
         }),
         ('Descriptions', {
-            'fields': ('description', 'description_1', 'description_2'),
+            'fields': ('description', 'description_1', 'description_2', 'desc_detail', 'desc_detail_1', 'desc_detail_2'),
             # 备注: 此处需要集成富文本编辑器 (如 TinyMCE) 来保留格式
+        }),
+        ('HTML Descriptions', {
+            # 将方法字段和路径字段放在这里
+            'fields': ('desc_html_link', 'desc_html_path',),
         }),
         ('JSON Raw Data', {
             'classes': ('collapse',),  # 默认折叠，减少页面冗余
             'fields': ('input', 'raw_json'),
         }),
     )
+
+    def desc_html_link(self, obj):
+        """
+        在 Admin 详情页显示 HTML 文件链接。
+        """
+        if obj.desc_html_path:
+            # 构造完整的 URL。由于文件保存在 BASE_DIR/data/html/，
+            # 我们需要让 Django Web 服务器能够访问它。
+
+            # 假设您已将 BASE_DIR/data/ 映射为 STATIC 或 MEDIA 路由，
+            # 但最简单的方法是直接在开发环境下使用文件路径：
+
+            # ⚠️ 注意: 在生产环境中，您需要配置 Web 服务器来托管 'data' 目录。
+            # 在开发服务器中，直接使用相对路径，但在 Admin 中无法直接链接到 BASE_DIR。
+
+            # 简化的解决方案 (Admin 链接到 Django URL):
+
+            # 为了让 Django 正确服务这些文件，通常将它们放在 MEDIA_ROOT 下，
+            # 但如果您坚持放在 data/html，最简单的做法是将其作为静态文件的一部分。
+
+            # 假设：我们将其视为项目根目录下的可访问文件
+            return format_html('<a href="/{}" target="_blank">View HTML</a>', obj.desc_html_path)
+
+        return "N/A (HTML 文件未生成)"
+
+    desc_html_link.short_description = "Desc html"
 
     # 2. 内联关联模型 (显示关联的图片、视频、变体)
     inlines = [
@@ -284,7 +314,9 @@ class ProductAdmin(admin.ModelAdmin):
     ]
 
     # 3. 不允许修改的字段
-    readonly_fields = ('source_id', 'created_at', 'updated_at')
+    readonly_fields = ('source_id', 'desc_html_link', 'desc_html_path', 'created_at', 'updated_at')
+
+
 
     # =========================================================
     # 产品抓取定制页

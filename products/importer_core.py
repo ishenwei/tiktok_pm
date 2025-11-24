@@ -1,11 +1,11 @@
 # products/importer_core.py
 import json
-import pymysql
 from datetime import datetime
 import requests
 import mimetypes
 from django.conf import settings  # 导入 settings 以获取配置
-
+from products.utils import save_html_file
+from products.utils import json_to_html
 
 # -----------------------------
 # Helper Functions
@@ -124,9 +124,21 @@ def insert_product(cursor, item):
     # (保持您原脚本中的 insert_product 逻辑不变)
     # ... 您的 SQL 和参数字典 ...
     store_name = item.get("store_details", {}).get("name")
+    desc_detail = safe_get(item, "desc_detail")
+    id = safe_get(item, "id")
+    desc_html_path = ""
+
+    print(" → → → Start to generate description html")
+
+    if desc_detail and id:
+        print(" → → → Generate description html")
+        html_content = json_to_html(desc_detail)
+        # 使用 source_id 作为文件名
+        desc_html_path = save_html_file(id, html_content)
+        print(" → → → Generated description html"+ desc_html_path)
 
     sql = """
-          INSERT INTO products (source_id, url, title, description, desc_detail, \
+          INSERT INTO products (source_id, url, title, description, desc_detail, desc_html_path, \
                                 available, In_stock, currency, initial_price, final_price, \
                                 discount_percent, initial_price_low, initial_price_high, \
                                 final_price_low, final_price_high, sold, position, \
@@ -134,7 +146,7 @@ def insert_product(cursor, item):
                                 videos, related_videos, video_link, category, category_url, \
                                 seller_id, store_name, prodct_rating, promotion_items, \
                                 shop_performance_metrics, timestamp, input, raw_json)
-          VALUES (%(source_id)s, %(url)s, %(title)s, %(description)s, %(desc_detail)s, \
+          VALUES (%(source_id)s, %(url)s, %(title)s, %(description)s, %(desc_detail)s, %(desc_html_path)s, \
                   %(available)s, %(In_stock)s, %(currency)s, %(initial_price)s, %(final_price)s, \
                   %(discount_percent)s, %(initial_price_low)s, %(initial_price_high)s, \
                   %(final_price_low)s, %(final_price_high)s, %(sold)s, %(position)s, \
@@ -150,6 +162,7 @@ def insert_product(cursor, item):
         "title": safe_get(item, "title"),
         "description": safe_get(item, "description"),
         "desc_detail": safe_get(item, "desc_detail"),
+        "desc_html_path": desc_html_path,
         "available": 1 if safe_get(item, "available") else 0,
         "In_stock": 1 if safe_get(item, "In_stock") else 0,
         "currency": safe_get(item, "currency"),
