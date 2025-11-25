@@ -35,7 +35,7 @@ def trigger_bright_data_task(urls, collection_mode):
         "Content-Type": "application/json"
     }
 
-    base_trigger_url = settings.BRIGHT_DATA_BASE_TRIGGER_URL
+    base_trigger_url = settings.BRIGHT_DATA_BASE_SCRAPE_URL
     final_trigger_url = base_trigger_url  # 初始化为基础URL
 
     # 只有非 'url' 模式才需要添加额外的发现参数和限制参数
