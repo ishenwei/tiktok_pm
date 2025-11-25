@@ -23,25 +23,50 @@ RETRY_DELAY = 60   # 重新轮询的间隔（秒）
 def trigger_bright_data_task(urls, collection_mode):
     # ... (构造 payload 和 headers 的代码不变) ...
 
-    # 1. 构造 JSON Payload
-    payload = {
-        "input": [{"url": u} for u in urls]
-    }
-    print(f"payload: {payload}")
+    # ----------------------------------------------------
+    # 1. 构造 JSON Payload (根据 collection_mode 动态变化)
+    # ----------------------------------------------------
 
+    if collection_mode in ['url', 'shop']:
+        # 模式 1: 'url' 或 'shop' 保持不变，键为 "url"
+        payload = {
+            "input": [{"url": u} for u in urls]
+        }
+
+    elif collection_mode == 'category':
+        # 模式 2: 'category' 使用 "category_url" 键
+        payload = {
+            "input": [{"category_url": u} for u in urls]
+        }
+
+    elif collection_mode == 'keyword':
+        # 模式 3: 'keyword' 使用 "keyword" 键，并包含 "domain"
+        payload = {
+            "input": [{"keyword": u, "domain": "https://www.tiktok.com/shop"} for u in urls]
+        }
+
+    else:
+        # 容错处理
+        print(f"ERROR: 未知的采集模式: {collection_mode}")
+        return False
+
+    print(f"Payload: {payload}")
+
+    # ----------------------------------------------------
     # 2. 构造 HTTP 请求头
+    # ----------------------------------------------------
     headers = {
         "Authorization": f"Bearer {settings.BRIGHT_DATA_API_KEY}",
         "Content-Type": "application/json"
     }
 
+    # ----------------------------------------------------
+    # 3. 构造最终触发 URL (URL 逻辑保持不变)
+    # ----------------------------------------------------
     base_trigger_url = settings.BRIGHT_DATA_BASE_SCRAPE_URL
-    final_trigger_url = base_trigger_url  # 初始化为基础URL
+    final_trigger_url = base_trigger_url
 
-    # 只有非 'url' 模式才需要添加额外的发现参数和限制参数
     if collection_mode == 'category':
-        # 注意：这里假设 BRIGHT_DATA_BASE_TRIGGER_URL 不以 ? 结尾，
-        # 且 DISCOVER_BY_CATEGORY 以 & 开头或包含所有必要的参数。
         final_trigger_url += f"{settings.BRIGHT_DATA_DISCOVER_TYPE}{settings.BRIGHT_DATA_DISCOVER_BY_CATEGORY}{settings.BRIGHT_DATA_PARAM_LIMIT_PER_INPUT}"
 
     elif collection_mode == 'shop':
@@ -50,10 +75,11 @@ def trigger_bright_data_task(urls, collection_mode):
     elif collection_mode == 'keyword':
         final_trigger_url += f"{settings.BRIGHT_DATA_DISCOVER_TYPE}{settings.BRIGHT_DATA_DISCOVER_BY_KEYWORD}{settings.BRIGHT_DATA_PARAM_LIMIT_PER_INPUT}"
 
-    # 如果是 'url' 模式，final_trigger_url 保持为 base_trigger_url
-
-    # 可以在这里打印 URL 进行调试
     print(f"Final Trigger URL: {final_trigger_url}")
+
+    # ----------------------------------------------------
+    # 4. 执行 API 调用
+    # ----------------------------------------------------
     try:
         response = requests.post(
             final_trigger_url,
@@ -70,13 +96,6 @@ def trigger_bright_data_task(urls, collection_mode):
             print(f"✅ Bright Data API 触发成功。snapshot_id: {snapshot_id}")
 
             # 第一次轮询任务（立即运行）
-            #Schedule.objects.create(
-            #    name=f"poll_{snapshot_id}",
-            #    func="products.tasks.poll_bright_data_result",
-            #    args=snapshot_id,
-            #    schedule_type=Schedule.ONCE,
-            #    next_run=timezone.now(),
-            #)
             _schedule_delayed_poll(snapshot_id, delay_seconds=0)
             return True
         else:
