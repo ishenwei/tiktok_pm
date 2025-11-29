@@ -247,7 +247,7 @@ IMAGE_DOWNLOAD_FLAG = False
 BRIGHT_DATA_API_KEY = os.environ.get('BRIGHT_DATA_API_KEY')
 BRIGHT_DATA_DATASET_ID = os.environ.get('BRIGHT_DATA_DATASET_ID')
 
-BRIGHT_DATA_BASE_SCRAPE_URL = "https://api.brightdata.com/datasets/v3/scrape?dataset_id=gd_m45m1u911dsa4274pi&notify=false&include_errors=true"
+BRIGHT_DATA_BASE_SCRAPE_URL = "https://api.brightdata.com/datasets/v3/trigger?dataset_id=gd_m45m1u911dsa4274pi&notify=false&include_errors=true"
 BRIGHT_DATA_STATUS_URL = "https://api.brightdata.com/datasets/v3/progress/"
 BRIGHT_DATA_DOWNLOAD_BASE_URL = "https://api.brightdata.com/datasets/v3/snapshot/"
 
