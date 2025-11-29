@@ -90,6 +90,7 @@ def trigger_bright_data_task(urls, collection_mode):
         response.raise_for_status()
 
         response_data = response.json()
+        print(f"response data: {response_data}")
         snapshot_id = response_data.get("snapshot_id")
 
         if snapshot_id:
@@ -135,8 +136,6 @@ def poll_bright_data_result(snapshot_id_list):
             print("   ▶ 状态未完成，30 秒后继续轮询")
 
             _schedule_delayed_poll(snapshot_id, delay_seconds=30)
-            return
-
             return
 
         # 完成 → 下载数据

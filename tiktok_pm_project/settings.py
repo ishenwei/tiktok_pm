@@ -256,7 +256,7 @@ BRIGHT_DATA_DISCOVER_BY_CATEGORY = "&discover_by=category"
 BRIGHT_DATA_DISCOVER_BY_KEYWORD = "&discover_by=keyword"
 BRIGHT_DATA_DISCOVER_BY_SHOP = "&discover_by=shop"
 
-BRIGHT_DATA_PARAM_LIMIT_PER_INPUT = "&limit_per_input=100"
+BRIGHT_DATA_PARAM_LIMIT_PER_INPUT = "&limit_per_input=5"
 
 # Zipline 配置
 ZIPLINE_UPLOAD_URL = os.environ.get('ZIPLINE_UPLOAD_URL')
