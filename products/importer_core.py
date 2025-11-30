@@ -356,6 +356,8 @@ def insert_store(cursor, item):
     rating = details.get("rating")
     num_of_items = details.get("num_of_items")
     num_sold = details.get("num_sold")
+    followers = details.get("followers")
+    badge = details.get("badge")
 
     store_id = extract_last_segment(store_url)
 
@@ -371,6 +373,8 @@ def insert_store(cursor, item):
             "rating": rating,
             "num_of_items": num_of_items,
             "num_sold": num_sold,
+            "followers": followers,
+            "badge": badge,
         }
     )
 
