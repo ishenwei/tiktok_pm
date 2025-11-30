@@ -1,16 +1,48 @@
 from django.db import models
 
 # Create your models here.
-from django.db import models
 from django.db.models.functions import Now
 from django.conf import settings
 from .utils import json_to_html, save_html_file
+from django.db import models
+
+# ----------------------------------------------------------------------
+# 新增模型: Store
+# ----------------------------------------------------------------------
+
+class Store(models.Model):
+    store_id = models.CharField(max_length=64, unique=True, db_index=True)
+    name = models.CharField(max_length=255, null=True, blank=True)
+    url = models.CharField(max_length=500, null=True, blank=True)
+
+    num_of_items = models.IntegerField(null=True, blank=True)
+    rating = models.FloatField(null=True, blank=True)
+    num_sold = models.IntegerField(null=True, blank=True)
+    followers = models.IntegerField(null=True, blank=True)
+    badge = models.CharField(max_length=500, null=True, blank=True)
+
+    class Meta:
+        db_table = "stores"
+
+    def __str__(self):
+        return f"{self.name} ({self.store_id})"
+
+# ----------------------------------------------------------------------
+# Table: Products
+# ----------------------------------------------------------------------
 
 class Product(models.Model):
     """
     对应 tables.sql 中的 products 表。
     存储 TikTok 平台产品的核心信息。
     """
+    store = models.ForeignKey(
+        Store,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="products"
+    )
 
     # 基础信息
     # id BIGINT AUTO_INCREMENT PRIMARY KEY 已经由 Django 自动创建
@@ -20,6 +52,11 @@ class Product(models.Model):
         db_index=True,  # 确保查询效率
         verbose_name="TikTok Source ID"
     )
+    url = models.TextField()
+    title = models.TextField(null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    available = models.BooleanField(default=True)
+
     url = models.TextField(blank=True, null=True)
     title = models.TextField(blank=True, null=True)
 
@@ -79,7 +116,6 @@ class Product(models.Model):
     category = models.CharField(max_length=255, blank=True, null=True, db_index=True)  # 对应 idx_category
     category_url = models.TextField(blank=True, null=True)
     seller_id = models.CharField(max_length=128, blank=True, null=True, db_index=True)  # 对应 idx_seller
-    store_name = models.CharField(max_length=255, blank=True, null=True)
 
     # 评价和性能
     prodct_rating = models.JSONField(blank=True, null=True)
@@ -300,3 +336,4 @@ class ProductReview(models.Model):
 
     def __str__(self):
         return f'{self.product.source_id} - {self.reviewer_name} ({self.rating}星)'
+

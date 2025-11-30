@@ -15,7 +15,8 @@ from .models import (
     ProductImage,
     ProductVideo,
     ProductVariation,
-    ProductReview
+    ProductReview,
+    Store
 )
 # --- 产品抓取 ---
 from .views import product_fetch_view
@@ -179,6 +180,12 @@ class ProductAdmin(admin.ModelAdmin):
             ''')
         return "N/A"
 
+    # 新增显示 Store 名称的方法
+    def store_name(self, obj):
+        return obj.store.name if obj.store else "-"
+
+    store_name.short_description = "Store"
+
     product_thumbnail.short_description = '图片'  # 列表页列名
     product_thumbnail.allow_tags = True
 
@@ -191,7 +198,7 @@ class ProductAdmin(admin.ModelAdmin):
         'product_thumbnail',  # <-- 将缩略图放在第一列
         'source_id',
         'title_short',
-        'store_name',
+        'store',
         'final_price',
         'sold',
         'available',
@@ -207,7 +214,6 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = (
         'source_id',
         'title',
-        'store_name',
         'category',
         'seller_id'
     )
@@ -215,7 +221,7 @@ class ProductAdmin(admin.ModelAdmin):
     # 4. 多条件过滤搜索 (要求 3.9: 多条件过滤)
     # 配置侧边栏过滤器，允许用户根据这些字段筛选数据
     list_filter = (
-        'store_name',
+        'store',
         #'In_stock',
         'category',
         #'currency',
@@ -263,7 +269,7 @@ class ProductAdmin(admin.ModelAdmin):
             ),
         }),
         ('Seller Info', {
-            'fields': ('seller_id', 'store_name', 'shop_performance_metrics'),
+            'fields': ('seller_id', 'shop_performance_metrics', 'store'),
         }),
         ('Descriptions', {
             'fields': ('description', 'description_1', 'description_2', 'desc_detail', 'desc_detail_1', 'desc_detail_2'),
@@ -351,3 +357,25 @@ class ProductImageAdmin(admin.ModelAdmin):
     list_filter = ()
     search_fields = ('image_type', 'original_url', 'zipline_url')  # 支持跨模型搜索
     raw_id_fields = ('product',)  # 使用ID输入框选择产品，提升性能
+
+
+# ------------------------------------------------------------
+# Store Admin
+# ------------------------------------------------------------
+
+@admin.register(Store)
+class StoreAdmin(admin.ModelAdmin):
+    list_display = [
+        "store_id",
+        "name",
+        "num_of_items",
+        "rating",
+        "num_sold",
+        "followers",
+        "badge",
+    ]
+
+    search_fields = ["store_id", "name"]
+    list_filter = ["rating"]  # 可根据需要调整
+
+    ordering = ["store_id"]   # Store 没有 created_at/updated_at，因此用 store_id 排序

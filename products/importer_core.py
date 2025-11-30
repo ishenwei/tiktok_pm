@@ -6,6 +6,8 @@ import mimetypes
 from django.conf import settings  # 导入 settings 以获取配置
 from products.utils import save_html_file
 from products.utils import json_to_html
+from urllib.parse import urlparse
+from products.models import Store
 
 # -----------------------------
 # Helper Functions
@@ -123,7 +125,10 @@ def download_media(url):
 def insert_product(cursor, item):
     # (保持您原脚本中的 insert_product 逻辑不变)
     # ... 您的 SQL 和参数字典 ...
-    store_name = item.get("store_details", {}).get("name")
+    store_obj = insert_store(cursor, item)
+    store_id_value = store_obj.id if store_obj else None
+    print(store_id_value)
+
     desc_detail = safe_get(item, "desc_detail")
     id = safe_get(item, "id")
     desc_html_path = ""
@@ -144,7 +149,7 @@ def insert_product(cursor, item):
                                 final_price_low, final_price_high, sold, position, \
                                 colors, sizes, shipping_fee, specifications, \
                                 videos, related_videos, video_link, category, category_url, \
-                                seller_id, store_name, prodct_rating, promotion_items, \
+                                seller_id, store_id, prodct_rating, promotion_items, \
                                 shop_performance_metrics, timestamp, input, raw_json)
           VALUES (%(source_id)s, %(url)s, %(title)s, %(description)s, %(desc_detail)s, %(desc_html_path)s, \
                   %(available)s, %(In_stock)s, %(currency)s, %(initial_price)s, %(final_price)s, \
@@ -152,7 +157,7 @@ def insert_product(cursor, item):
                   %(final_price_low)s, %(final_price_high)s, %(sold)s, %(position)s, \
                   %(colors)s, %(sizes)s, %(shipping_fee)s, %(specifications)s, \
                   %(videos)s, %(related_videos)s, %(video_link)s, %(category)s, %(category_url)s, \
-                  %(seller_id)s, %(store_name)s, %(prodct_rating)s, %(promotion_items)s, \
+                  %(seller_id)s, %(store_id)s, %(prodct_rating)s, %(promotion_items)s, \
                   %(shop_performance_metrics)s, %(timestamp)s, %(input)s, %(raw_json)s); \
           """
 
@@ -185,7 +190,7 @@ def insert_product(cursor, item):
         "category": safe_get(item, "category"),
         "category_url": safe_get(item, "category_url"),
         "seller_id": safe_get(item, "seller_id"),
-        "store_name": store_name,
+        "store_id": store_id_value,
         "prodct_rating": json_or_none(safe_get(item, "prodct_rating")),
         "promotion_items": json_or_none(safe_get(item, "promotion_items")),
         "shop_performance_metrics": json_or_none(safe_get(item, "Shop_performance_metrics")),
@@ -341,3 +346,51 @@ def insert_reviews(cursor, product_id, item, download_images_flag):
             images_json,
             zipline_image_json,
         ))
+
+def insert_store(cursor, item):
+    """创建或获取店铺记录，返回 Store ORM 对象"""
+
+    details = item.get("store_details") or {}
+    store_url = details.get("url")
+    store_name = details.get("name")
+    rating = details.get("rating")
+    num_of_items = details.get("num_of_items")
+    num_sold = details.get("num_sold")
+
+    store_id = extract_last_segment(store_url)
+
+    if not store_id:
+        print("❌ Store URL invalid, skip store creation")
+        return None
+
+    store, created = Store.objects.update_or_create(
+        store_id=store_id,
+        defaults={
+            "name": store_name,
+            "url": store_url,
+            "rating": rating,
+            "num_of_items": num_of_items,
+            "num_sold": num_sold,
+        }
+    )
+
+    if created:
+        print(f"✅ Created new store: {store_id} ({store_name})")
+    else:
+        print(f"✔️ Store exists: {store_id}")
+
+    return store
+
+
+def extract_last_segment(url: str) -> str:
+    """
+    从 TikTok 店铺 URL 中提取最后一个路径字段。
+    例如：
+      https://www.tiktok.com/shop/store/kuangcao-shop/7494162489761105528
+    返回：
+      7494162489761105528
+    """
+    parsed = urlparse(url)
+    path = parsed.path.strip("/")        # 去掉左右两边的 "/"
+    segments = path.split("/")           # 按路径层级分割
+    return segments[-1] if segments else None
