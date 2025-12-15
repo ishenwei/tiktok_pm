@@ -1,0 +1,13 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% block submit_buttons_bottom %}
+    {{ block.super }}
+
+    <div class="submit-row">
+        <a class="button"
+           href="{% url 'admin:products_product_download-images' original.pk %}">
+            📥 一键下载所有商品图片
+        </a>
+    </div>
+{% endblock %}

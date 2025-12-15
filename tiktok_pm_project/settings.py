@@ -121,7 +121,7 @@ DATABASES = {
         'USER': os.environ.get('MYSQL_USER'),
         'PASSWORD': os.environ.get('MYSQL_PASSWORD'),
         'HOST': os.environ.get('MYSQL_HOST'),
-        'PORT': os.environ.get('MYSQL_PORT', '3306'),
+        'PORT': os.environ.get('MYSQL_PORT', '3307'),
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
             'charset': 'utf8mb4',
@@ -261,3 +261,13 @@ BRIGHT_DATA_PARAM_LIMIT_PER_INPUT = "&limit_per_input=5"
 # Zipline 配置
 ZIPLINE_UPLOAD_URL = os.environ.get('ZIPLINE_UPLOAD_URL')
 ZIPLINE_API_KEY = os.environ.get('ZIPLINE_API_KEY')
+
+
+# ==========================================================
+# 产品图片下载路径
+# ==========================================================
+
+PRODUCT_MEDIA_DOWNLOAD_ROOT = os.getenv(
+    "PRODUCT_MEDIA_DOWNLOAD_ROOT",
+    os.path.join(BASE_DIR, "downloaded_products")
+)

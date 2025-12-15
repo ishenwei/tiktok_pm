@@ -1,8 +1,6 @@
 from django.contrib import admin
 
-# Register your models here.
-from django.urls import path
-from django.contrib import admin
+
 # --- 导入富文本字段 ---
 from tinymce.widgets import TinyMCE
 # --- 导入 forms 模块 ---
@@ -20,6 +18,13 @@ from .models import (
 )
 # --- 产品抓取 ---
 from .views import product_fetch_view
+
+from django.urls import path
+from django.shortcuts import redirect
+from django.contrib import admin, messages
+
+from .models import Product
+from .services.product_media_downloader import download_all_product_images
 
 # ----------------------------------------------------------------------
 # 核心类: 定义富文本表单 (用于 ProductAdmin)
@@ -143,7 +148,7 @@ class ProductReviewInline(admin.TabularInline):
 # 核心类: 定制 Product 模型的管理界面 (CRUD)
 # ----------------------------------------------------------------------
 
-@admin.register(Product)
+
 class ProductAdmin(admin.ModelAdmin):
     # --- 新增: 引用自定义表单 ---
     form = ProductAdminForm
@@ -309,6 +314,57 @@ class ProductAdmin(admin.ModelAdmin):
 
         return "N/A (HTML 文件未生成)"
 
+
+    # =========================================================
+    # 图片下载按钮
+    # =========================================================
+
+    change_form_template = "admin/products/product/change_form.html"
+
+    # admin.py (ProductAdmin 类内部)
+
+    def get_urls(self):
+        urls = super().get_urls()
+
+        # 🌟 关键修改：获取应用名和模型名，用于构造独立的 name 🌟
+        app_label = self.model._meta.app_label  # 'products'
+        model_name = self.model._meta.model_name  # 'product'
+
+        # 定义基础 URL 名称，例如：products_product_
+        base_name = f'{app_label}_{model_name}'
+
+        custom_urls = [
+            # ① 商品图片一键下载
+            path(
+                "<int:product_id>/download-images/",
+                self.admin_site.admin_view(self.download_images),
+                # 使用 base_name + 唯一后缀
+                name=f"{base_name}_download-images",
+            ),
+
+            # ② 商品抓取页面 (同时修改，以保持命名一致性)
+            path(
+                "product_fetch/",
+                self.admin_site.admin_view(product_fetch_view),
+                name=f"{base_name}_fetch",  # 例如：products_product_fetch
+            ),
+        ]
+        return custom_urls + urls
+
+    def download_images(self, request, product_id):
+        product = Product.objects.get(pk=product_id)
+
+        target_dir, summary = download_all_product_images(product)
+
+        messages.success(
+            request,
+            f"下载完成：商品图片 {summary['product_images']} 张，"
+            f"SKU 图片 {summary['variation_images']} 张，"
+            f"详情图片 {summary['desc_images']} 张。\n"
+            f"目录：{target_dir}"
+        )
+        return redirect(request.META.get("HTTP_REFERER"))
+
     desc_html_link.short_description = "Desc html"
 
     # 2. 内联关联模型 (显示关联的图片、视频、变体)
@@ -324,16 +380,6 @@ class ProductAdmin(admin.ModelAdmin):
 
 
 
-    # =========================================================
-    # 产品抓取定制页
-    # =========================================================
-    def get_urls(self):
-        urls = super().get_urls()
-        custom_urls = [
-            # 新增 /admin/product_fetch/ 路径
-            path('product_fetch/', self.admin_site.admin_view(product_fetch_view), name='product_fetch'),
-        ]
-        return custom_urls + urls
 
 
 # ----------------------------------------------------------------------
@@ -379,3 +425,5 @@ class StoreAdmin(admin.ModelAdmin):
     list_filter = ["rating"]  # 可根据需要调整
 
     ordering = ["store_id"]   # Store 没有 created_at/updated_at，因此用 store_id 排序
+
+admin.site.register(Product, ProductAdmin)
