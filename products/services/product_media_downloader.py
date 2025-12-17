@@ -88,7 +88,7 @@ def download_all_product_images(product) -> (str, Dict[str, int]):
     #base_save_dir = Path(settings.MEDIA_ROOT) / 'downloaded_media' / product_id
     #base_save_dir.mkdir(parents=True, exist_ok=True)
     base_download_root = settings.PRODUCT_MEDIA_DOWNLOAD_ROOT
-    base_save_dir = Path(base_download_root) / store_name / product_id
+    base_save_dir = Path(base_download_root)  / product_id
 
     # 2. 初始化计数器和汇总数据
     global_image_counter = 1

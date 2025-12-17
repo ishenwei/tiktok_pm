@@ -7,7 +7,6 @@ from django_q.models import Schedule
 from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
-from .importer_wrapper import start_import_process
 
 # 轮询任务配置
 INITIAL_DELAY = 30 # 第一次轮询延迟（秒）
@@ -114,6 +113,9 @@ def trigger_bright_data_task(urls, collection_mode):
 # ==========================================================
 # 任务：轮询 Bright Data 结果
 # ==========================================================
+# ==========================================================
+# 任务：轮询 Bright Data 结果
+# ==========================================================
 def poll_bright_data_result(snapshot_id_list):
     # 关键修复：从列表中取出实际的 ID 字符串
     snapshot_id = snapshot_id_list[0]
@@ -147,16 +149,16 @@ def poll_bright_data_result(snapshot_id_list):
             downloaded_data = download_response.json()
             print(f"   下载成功 {len(downloaded_data)} records")
 
-            # 保存 JSON 文件（建议单独 async）
+            # 保存 JSON 文件
             async_task(
                 "products.tasks.save_snapshot_file",
                 snapshot_id,
                 downloaded_data
             )
 
-            # 启动导入任务（分离职责）
+            # 🌟 关键修改：指向新的 ORM 导入服务 🌟
             async_task(
-                "products.importer_wrapper.start_import_process",
+                "products.services.product_importer.import_products_from_list",
                 downloaded_data
             )
 

@@ -52,16 +52,12 @@ class Product(models.Model):
         db_index=True,  # 确保查询效率
         verbose_name="TikTok Source ID"
     )
-    url = models.TextField()
-    title = models.TextField(null=True, blank=True)
-    description = models.TextField(null=True, blank=True)
-    available = models.BooleanField(default=True)
 
     url = models.TextField(blank=True, null=True)
-    title = models.TextField(blank=True, null=True)
+    title = models.TextField(null=True, blank=True)
+    available = models.BooleanField(default=True)
 
-    # 描述字段 (使用 TextField 对应 MySQL 的 LONGTEXT/TEXT)
-    description = models.TextField(blank=True, null=True)
+    description = models.TextField(null=True, blank=True)
     description_1 = models.TextField(blank=True, null=True)
     description_2 = models.TextField(blank=True, null=True)
 
@@ -76,7 +72,6 @@ class Product(models.Model):
     desc_html_path = models.CharField(max_length=255, blank=True, null=True)
 
     # 状态字段
-    available = models.BooleanField(blank=True, null=True)
     In_stock = models.BooleanField(blank=True, null=True)  # 字段名与SQL文件保持一致
 
     # 价格字段
@@ -118,7 +113,7 @@ class Product(models.Model):
     seller_id = models.CharField(max_length=128, blank=True, null=True, db_index=True)  # 对应 idx_seller
 
     # 评价和性能
-    prodct_rating = models.JSONField(blank=True, null=True)
+    product_rating = models.JSONField(blank=True, null=True)
     promotion_items = models.JSONField(blank=True, null=True)
     shop_performance_metrics = models.JSONField(blank=True, null=True)
 
