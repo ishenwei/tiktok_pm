@@ -1,31 +1,50 @@
-/* 模态框背景，覆盖整个屏幕 */
-.image-modal {
-    display: none; /* 默认隐藏 */
+/* products/static/admin/css/admin_image_modal.css */
+
+/* 模态框背景 */
+.admin-media-modal {
+    display: none;
     position: fixed;
-    z-index: 9999; /* 确保在最上层 */
+    z-index: 9999;
+    padding-top: 50px;
     left: 0;
     top: 0;
     width: 100%;
     height: 100%;
     overflow: auto;
-    background-color: rgba(0, 0, 0, 0.9); /* 黑色半透明背景 */
+    background-color: rgba(0,0,0,0.85); /* 深色半透明背景 */
 }
 
-/* 模态框内容：图片居中 */
-.image-modal-content {
+/* 模态框内容 (图片和视频共用) */
+.admin-media-content {
+    margin: auto;
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 90%;
+    max-height: 85vh; /* 限制高度，防止超出屏幕 */
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    border-radius: 4px;
+}
+
+/* 视频特定样式 */
+#media-modal-video {
+    background-color: #000; /* 视频未加载时显示黑色 */
+}
+
+/* 标题文本 */
+#admin-media-caption {
     margin: auto;
     display: block;
     width: 80%;
-    max-width: 900px;
-    max-height: 90vh; /* 限制最大高度为视口高度的 90% */
-    object-fit: contain; /* 确保图片在框内完整显示 */
-    position: relative;
-    top: 50%;
-    transform: translateY(-50%);
+    max-width: 700px;
+    text-align: center;
+    color: #ccc;
+    padding: 10px 0;
+    height: 150px;
 }
 
 /* 关闭按钮 */
-.image-modal-close {
+.admin-media-close {
     position: absolute;
     top: 15px;
     right: 35px;
@@ -37,8 +56,26 @@
     z-index: 10000;
 }
 
-.image-modal-close:hover,
-.image-modal-close:focus {
+.admin-media-close:hover,
+.admin-media-close:focus {
     color: #bbb;
     text-decoration: none;
+    cursor: pointer;
+}
+
+/* 动画效果 */
+.admin-media-content, #admin-media-caption {
+    animation-name: zoom;
+    animation-duration: 0.3s;
+}
+
+@keyframes zoom {
+    from {transform:scale(0)}
+    to {transform:scale(1)}
+}
+
+/* 视频缩略图的悬停效果 */
+.video-clickable-wrapper:hover {
+    border-color: #447e9b !important;
+    opacity: 0.9;
 }

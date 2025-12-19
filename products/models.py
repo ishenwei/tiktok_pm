@@ -1,13 +1,10 @@
-from django.db import models
-
 # Create your models here.
 from django.db.models.functions import Now
-from django.conf import settings
 from .utils import json_to_html, save_html_file
 from django.db import models
 
 # ----------------------------------------------------------------------
-# 新增模型: Store
+# Table: Store
 # ----------------------------------------------------------------------
 
 class Store(models.Model):
@@ -130,6 +127,9 @@ class Product(models.Model):
     created_at = models.DateTimeField(blank=True, null=True, db_default=Now(),)
     updated_at = models.DateTimeField(blank=True, null=True, db_default=Now(),)
 
+    #新增tags, 使用 JSONField 存储标签列表，例如 ["candidate", "hot"]
+    tags = models.JSONField(default=list, blank=True, null=True)
+
     class Meta:
         # 定义模型的复数名称，让Admin后台显示更友好
         verbose_name = "TikTok Product"
@@ -199,14 +199,10 @@ class Product(models.Model):
 
             if relative_path:
                 self.desc_html_path = relative_path
-# ------------------------------------------------------------
-# 提示：其他关联表 (product_images, product_variations 等)
-# 需要您参照此格式，继续在 models.py 文件中创建，并设置 ForeignKey 关联。
-# ------------------------------------------------------------
 
 
 # ------------------------------------------------------------
-# 1. Table: product_images
+# Table: product_images
 # ------------------------------------------------------------
 class ProductImage(models.Model):
     product = models.ForeignKey(
@@ -231,7 +227,7 @@ class ProductImage(models.Model):
 
 
 # ------------------------------------------------------------
-# 2. Table: product_videos
+# Table: product_videos
 # ------------------------------------------------------------
 class ProductVideo(models.Model):
     product = models.ForeignKey(
@@ -256,7 +252,7 @@ class ProductVideo(models.Model):
 
 
 # ------------------------------------------------------------
-# 3. Table: product_variations
+# Table: product_variations
 # ------------------------------------------------------------
 class ProductVariation(models.Model):
     product = models.ForeignKey(
@@ -295,7 +291,7 @@ class ProductVariation(models.Model):
 
 
 # ----------------------------------------------------------------------
-# 新增模型: ProductReview
+# Table: product_reviews
 # ----------------------------------------------------------------------
 
 class ProductReview(models.Model):
@@ -332,3 +328,21 @@ class ProductReview(models.Model):
     def __str__(self):
         return f'{self.product.source_id} - {self.reviewer_name} ({self.rating}星)'
 
+# ----------------------------------------------------------------------
+# Table: product_tag_definition
+# ----------------------------------------------------------------------
+class ProductTagDefinition(models.Model):
+    code = models.SlugField(max_length=50, unique=True, help_text="存入数据库的唯一标识，如 'candidate'")
+    name = models.CharField(max_length=100, help_text="显示给用户的名称，如 '待发布'")
+    color = models.CharField(max_length=20, default="#666666", help_text="十六进制颜色，如 #FF5733")
+    # 创建时间 (对应 TIMESTAMP DEFAULT CURRENT_TIMESTAMP)
+    # 采用之前针对 MySQL DDL 的解决方案：依赖数据库的 DEFAULT
+    created_at = models.DateTimeField(blank=True, null=True, db_default=Now(),)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = 'Tag Definition'
+        verbose_name_plural = 'Tag Definitions'
+        db_table = 'product_tags'

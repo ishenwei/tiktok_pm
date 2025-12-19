@@ -4,9 +4,6 @@ from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
 from pathlib import Path
 
-# 🌟 关键修改：将导入路径改为新的 ORM 服务层 🌟
-# 旧: from products.importer_wrapper import import_products_from_list
-# 新:
 from products.services.product_importer import import_products_from_list
 
 

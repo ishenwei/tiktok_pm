@@ -1,6 +1,5 @@
 # products/utils.py
 
-import json
 import os
 from django.conf import settings
 
@@ -91,3 +90,78 @@ def save_html_file(source_id, html_content):
     except Exception as e:
         print(f"写入文件失败: {e}")
         return None
+
+
+# products/utils.py
+
+import json
+from django.utils.safestring import mark_safe
+
+
+# ... (保留你原有的 save_html_file 等函数) ...
+
+def format_json_to_html(data_input):
+    """
+    通用工具：将 JSON 数据格式化为 HTML 字符串。
+    支持格式：
+    1. List of Dicts (TikTok Style): [{"name": "Color", "value": "Red"}, ...]
+    2. Simple Dict: {"Color": "Red", "Size": "XL"}
+
+    效果：
+    Key: Value (不换行)
+    Key: Value (不换行)
+    """
+    if not data_input:
+        return "-"
+
+    data = data_input
+
+    # 1. 如果是字符串，尝试解析为 JSON 对象
+    if isinstance(data, str):
+        try:
+            data = json.loads(data)
+        except (json.JSONDecodeError, TypeError):
+            # 解析失败，直接返回原字符串
+            return data_input
+
+    lines = []
+
+    # 2. 处理 List 类型 (例如: [{"name": "Color", "value": "Red"}])
+    if isinstance(data, list):
+        for item in data:
+            if isinstance(item, dict):
+                # 优先尝试获取 TikTok 标准的 name/value 键
+                k = item.get('name') or item.get('key')
+                v = item.get('value') or item.get('val')
+
+                if k is not None and v is not None:
+                    lines.append(f"{k}: {v}")
+                else:
+                    # 如果不是 name/value 结构，则把字典里的每一对都打出来
+                    for sub_k, sub_v in item.items():
+                        lines.append(f"{sub_k}: {sub_v}")
+            else:
+                # 列表里是纯字符串等
+                lines.append(str(item))
+
+    # 3. 处理 Dict 类型 (例如: {"Color": "Red", "Weight": "1kg"})
+    elif isinstance(data, dict):
+        for k, v in data.items():
+            lines.append(f"{k}: {v}")
+
+    # 4. 其他类型直接转字符串
+    else:
+        lines.append(str(data))
+
+    # 5. HTML 渲染：包裹 span 防止文字换行，用 <br> 连接各行
+    if not lines:
+        return "-"
+
+    formatted_html = []
+    for line in lines:
+        # white-space: nowrap 保证单行内容不折行
+        # display: inline-block 保证结构完整
+        span = f'<span style="white-space: nowrap; display: inline-block; margin-right: 5px;">{line}</span>'
+        formatted_html.append(span)
+
+    return mark_safe("<br>".join(formatted_html))

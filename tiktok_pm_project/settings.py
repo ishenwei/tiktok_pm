@@ -146,7 +146,7 @@ Q_CLUSTER = {
     "workers": 4,               # worker 数量
     "recycle": 500,
     "timeout": 300,
-    "retry": 120,
+    "retry": 360,
     "queue_limit": 50,
     "bulk": 10,
     "save_limit": 250,
