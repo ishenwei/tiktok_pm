@@ -1,0 +1,28 @@
+{% load i18n %}
+
+<button class="sticky toggle-nav-sidebar" id="toggle-nav-sidebar" aria-label="{% translate 'Toggle navigation' %}"></button>
+<nav class="sticky" id="nav-sidebar">
+    <input type="search" id="nav-filter"
+           placeholder="{% translate 'Start typing to filter…' %}"
+           aria-label="{% translate 'Filter navigation items' %}">
+
+    {% include 'admin/app_list.html' with app_list=available_apps show_changelinks=False %}
+
+    <div class="app-product_fetch module">
+        <table>
+            <caption>
+                <a href="#" class="section" title="Tools">Product Fetch</a>
+            </caption>
+            <tbody>
+                <tr class="model-product-fetch">
+                    <th scope="row">
+                        <a href="{% url 'admin:products_product_fetch' %}">Product Fetch</a>
+                    </th>
+                    <td>
+                        <a href="{% url 'admin:products_product_fetch' %}" class="addlink" title="Go to Fetch"></a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</nav>

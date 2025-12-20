@@ -1,20 +1,22 @@
-from django.shortcuts import render
-
-# Create your views here.
-# products/views.py
-
-from rest_framework import viewsets
-from .models import Product, ProductVariation
-from .serializers import ProductSerializer, ProductVariationSerializer
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters
 from django.shortcuts import render, redirect
+from rest_framework import viewsets, filters
+from django_filters.rest_framework import DjangoFilterBackend
 from django import forms
 from django.contrib import messages
+
+# 🌟 1. 导入 admin 模块 (用于获取 sidebar context)
+from django.contrib import admin
+
 # 导入 django-q 任务调度器
 from django_q.tasks import async_task
-# 导入触发 Bright Data 任务的函数 (该函数现在将接收一个 URL 列表)
+
+# 导入模型和序列化器
+from .models import Product, ProductVariation
+from .serializers import ProductSerializer, ProductVariationSerializer
+
+# 导入任务函数
 from .tasks import trigger_bright_data_task
+
 
 class ProductViewSet(viewsets.ModelViewSet):
     """
@@ -23,9 +25,6 @@ class ProductViewSet(viewsets.ModelViewSet):
     """
     queryset = Product.objects.all().order_by('-updated_at')
     serializer_class = ProductSerializer
-
-    # 限制只有认证用户才能访问 API
-    # permission_classes = [IsAuthenticated]
 
     # 启用过滤和搜索后端
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
@@ -47,7 +46,6 @@ class ProductViewSet(viewsets.ModelViewSet):
         'description'
     ]
 
-    # 可选：自定义查询集以提高性能
     def get_queryset(self):
         # 预加载关联数据以解决 N+1 查询问题
         return Product.objects.all().select_related().prefetch_related(
@@ -62,14 +60,13 @@ class ProductVariationViewSet(viewsets.ModelViewSet):
     queryset = ProductVariation.objects.all()
     serializer_class = ProductVariationSerializer
 
-    # 启用字段过滤
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['product', 'sku', 'stock']
     search_fields = ['=sku', 'product__source_id']
 
 
 # ----------------------------------------------------
-# 1. 定义表单 (使用 Textarea 控件)
+# Form 定义
 # ----------------------------------------------------
 class ProductUrlsForm(forms.Form):
     # 定义模式选项
@@ -80,11 +77,10 @@ class ProductUrlsForm(forms.Form):
         ('keyword', '4. Discover by Keyword (单个关键词)'),
     ]
 
-    # 🌟 新增 collection_mode 字段 🌟
     collection_mode = forms.ChoiceField(
         label="选择采集方式",
         choices=MODE_CHOICES,
-        widget=forms.RadioSelect,  # 使用 RadioSelect 渲染为单选按钮
+        widget=forms.RadioSelect,
         initial='url'
     )
 
@@ -97,24 +93,15 @@ class ProductUrlsForm(forms.Form):
     def clean_product_urls(self):
         """清理并转换多行文本为 URL 列表，并过滤空行。"""
         raw_text = self.cleaned_data['product_urls']
-
-        # 1. 按行分割
-        # 2. 移除每行首尾空格
-        # 3. 过滤掉空行
         urls = [line.strip() for line in raw_text.splitlines() if line.strip()]
 
         if not urls:
             raise forms.ValidationError("请输入至少一个有效的 URL。")
-
-        # 可以在此处添加更复杂的 URL 格式验证
-        # ...
-
-        # 返回 URL 列表
         return urls
 
 
 # ----------------------------------------------------
-# 2. 定义视图
+# 🌟 View 定义 (已修改支持 Sidebar)
 # ----------------------------------------------------
 def product_fetch_view(request):
     """
@@ -123,35 +110,35 @@ def product_fetch_view(request):
     if request.method == 'POST':
         form = ProductUrlsForm(request.POST)
         if form.is_valid():
-            # 获取清理后的 URL 列表
             urls_list = form.cleaned_data['product_urls']
             collection_mode = form.cleaned_data['collection_mode']
             print("collection_mode: ", collection_mode)
 
-            # ----------------------------------------------------
-            # 🌟 核心操作：将 URL 列表传递给异步任务
-            # ----------------------------------------------------
-            # 注意: trigger_bright_data_task 的签名必须接受这个列表作为参数
+            # 触发异步任务
             async_task(
                 trigger_bright_data_task,
-                urls_list, collection_mode, # 传递 URL 列表
+                urls_list, collection_mode,
                 hook='products.tasks.log_task_completion',
             )
 
-            # 成功消息
-            messages.success(request, f"成功提交 {len(urls_list)} 个产品URL任务。任务已转入后台异步处理。")
+            messages.success(request, f"成功提交 {len(urls_list)} 个任务。任务已转入后台异步处理。")
 
             # 重定向回 Products 列表页
-            url_name = 'admin:products_product_changelist'
-            return redirect(url_name)
+            return redirect('admin:products_product_changelist')
     else:
-        # GET 请求：显示空表单
         form = ProductUrlsForm()
 
-    # 渲染模板
-    return render(request, 'admin/product_fetch.html', context={
-        'title': '触发产品数据抓取',
+    # 🌟 核心修改：构建包含 Admin Context 的数据字典
+    context = {
+        'title': 'TikTok 产品数据抓取',  # 页面标题
         'form': form,
         'has_permission': True,
-        'opts': {'verbose_name_plural': '产品'},
-    })
+        # 使用 Product._meta 让模板正确识别 App 和 Model 名称 (用于面包屑)
+        'opts': Product._meta,
+    }
+
+    # 🌟 关键：注入 available_apps 等全局 Admin 数据
+    # 没有这一行，侧边栏 (Sidebar) 就不会显示
+    context.update(admin.site.each_context(request))
+
+    return render(request, 'admin/product_fetch.html', context)

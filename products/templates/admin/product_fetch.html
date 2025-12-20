@@ -1,38 +1,63 @@
 {% extends "admin/base_site.html" %}
 {% load i18n admin_urls static %}
 
+{# 🌟 1. 添加额外的 CSS/JS 支持 (可选) #}
+{% block extrahead %}
+    {{ block.super }}
+    {{ media }}
+{% endblock %}
+
+{# 🌟 2. 添加面包屑导航 (Breadcrumbs) #}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='products' %}">Products</a>
+    &rsaquo; TikTok 产品数据抓取
+</div>
+{% endblock %}
+
+{# 🌟 3. 内容区域 #}
 {% block content %}
 <div id="content-main">
     <form action="" method="post">
         {% csrf_token %}
-        <fieldset class="module">
-            <h2>{% translate "TikTok 产品数据抓取" %}</h2>
-            <div class="form-row">
-                <p>{% translate "请输入要触发 Bright Data 抓取的 TikTok 产品 URL 列表。" %}</p>
 
-                {# 渲染表单字段，它将被定义为 Textarea #}
+        {# 使用 module 类可以自动获得 Admin 风格的边框和阴影 #}
+        <fieldset class="module aligned">
+            <h2>{% translate "配置抓取参数" %}</h2>
+
+            <div class="form-row">
+                <div class="description" style="margin-bottom: 15px; color: var(--body-fg);">
+                    {% translate "请输入要触发 Bright Data 抓取的 TikTok 产品 URL 列表。" %}
+                </div>
+
                 {% if form %}
                     {% for field in form %}
-                        <div class="fieldWrapper">
-                            {{ field.errors }}
-
-                            {# 🌟 关键：对 RadioSelect 的特殊处理 🌟 #}
-                            {% if field.name == 'collection_mode' %}
-                                <div class="field-box">
+                        <div class="form-row field-{{ field.name }}">
+                            <div>
+                                {# 渲染 Label #}
+                                {% if field.field.widget.input_type != 'checkbox' %}
                                     {{ field.label_tag }}
-                                    <div class="related-widget-wrapper">
-                                        {{ field }} {# 渲染为 ul/li 的 RadioSelect #}
-                                        {# 移除原来的 <p> 标签，使用 help_text #}
-                                    </div>
-                                </div>
-                            {% else %}
-                                {# 渲染其他字段 (product_urls) #}
-                                {{ field.label_tag }}
-                                {{ field }}
-                                {% if field.help_text %}
-                                <p class="help">{{ field.help_text }}</p>
                                 {% endif %}
-                            {% endif %}
+
+                                {# 渲染 RadioSelect 的特殊处理 #}
+                                {% if field.name == 'collection_mode' %}
+                                    <div class="related-widget-wrapper" style="display: inline-block;">
+                                        {{ field }}
+                                    </div>
+                                {% else %}
+                                    {# 普通字段 #}
+                                    {{ field }}
+                                {% endif %}
+
+                                {# 错误信息 #}
+                                {{ field.errors }}
+
+                                {# 帮助文本 #}
+                                {% if field.help_text %}
+                                    <div class="help" style="margin-left: 0;">{{ field.help_text }}</div>
+                                {% endif %}
+                            </div>
                         </div>
                     {% endfor %}
                 {% endif %}
@@ -40,7 +65,7 @@
         </fieldset>
 
         <div class="submit-row">
-            <input type="submit" value="{% translate '提交任务并开始抓取' %}" name="_start" />
+            <input type="submit" value="{% translate '提交任务并开始抓取' %}" class="default" name="_start" />
         </div>
     </form>
 </div>
