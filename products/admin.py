@@ -21,7 +21,7 @@ from .models import (
 )
 
 # 导入视图和服务
-from .views import product_fetch_view
+from .views import product_fetch_view, export_product_json_view, n8n_analyze_view
 from .services.product_media_downloader import download_all_product_images
 
 # 🌟 从新文件导入表单 🌟
@@ -371,6 +371,7 @@ class ProductAdmin(admin.ModelAdmin):
 
     metrics_display.short_description = "Shop Performance Metrics"
 
+
     # === 配置列表页 ===
     list_display = (
         'product_thumbnail',
@@ -488,6 +489,17 @@ class ProductAdmin(admin.ModelAdmin):
                 "<int:product_id>/download-images/",
                 self.admin_site.admin_view(self.download_images),
                 name=f"{base_name}_download-images",
+            ),
+            # 🌟 新增 1: 导出 JSON
+            path(
+                "<int:product_id>/export-json/", self.admin_site.admin_view(export_product_json_view),
+                 name=f"{base_name}_export_json"
+            ),
+
+            # 🌟 新增 2: n8n AI 分析
+            path(
+                "<int:product_id>/n8n-analyze/", self.admin_site.admin_view(n8n_analyze_view),
+                 name=f"{base_name}_n8n_analyze"
             ),
             path(
                 "product_fetch/",

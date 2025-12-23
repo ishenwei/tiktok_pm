@@ -271,3 +271,6 @@ PRODUCT_MEDIA_DOWNLOAD_ROOT = os.getenv(
     "PRODUCT_MEDIA_DOWNLOAD_ROOT",
     os.path.join(BASE_DIR, "downloaded_products")
 )
+
+N8N_WEBHOOK_OPTIMIZE_PRODUCT_TEST_URL = "https://n8n.ishenwei.online/webhook-test/optimize-tk-product"
+N8N_WEBHOOK_OPTIMIZE_PRODUCT_URL = "https://n8n.ishenwei.online/webhook/optimize-tk-product"

@@ -163,6 +163,29 @@
             color: #eee !important;
             border: 1px solid #555 !important;
         }
+
+        /* 🌟 新增按钮样式 */
+        .btn-tool {
+            padding: 8px 12px;
+            margin-right: 8px;
+            border-radius: 4px;
+            color: white !important;
+            text-decoration: none;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-json { background-color: #28a745; } /* 绿色 */
+        .btn-json:hover { background-color: #218838; }
+
+        .btn-n8n { background-color: #6f42c1; } /* 紫色 */
+        .btn-n8n:hover { background-color: #5a32a3; }
+
+        .btn-dl { background-color: #447e9b; } /* 蓝色 */
     </style>
 {% endblock %}
 
@@ -177,10 +200,15 @@
     {{ block.super }}
     {% if original %}
         <div class="submit-row">
-            <a class="button"
-               href="{% url 'admin:products_product_download-images' original.pk %}"
-               style="background-color: #447e9b; color: white;">
-                📥 一键下载所有商品图片
+            <a class="btn-tool btn-json" href="{% url 'admin:products_product_export_json' original.pk %}" target="_blank">
+                    📄 Export JSON
+            </a>
+            <a class="btn-tool btn-n8n" href="{% url 'admin:products_product_n8n_analyze' original.pk %}"
+                   onclick="return confirm('确定要发送数据给 AI (n8n) 进行分析吗？这可能需要几秒钟。');">
+                    🤖 AI Optimize (n8n)
+            </a>
+            <a class="btn-tool btn-dl" href="{% url 'admin:products_product_download-images' original.pk %}">
+                    📥 Download Images
             </a>
         </div>
     {% endif %}
