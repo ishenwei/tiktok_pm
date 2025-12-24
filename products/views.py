@@ -179,7 +179,7 @@ def n8n_analyze_view(request, product_id):
     product = get_object_or_404(Product, pk=product_id)
     product_data = _extract_product_data(product)
 
-    n8n_webhook_url = getattr(settings, 'N8N_WEBHOOK_OPTIMIZE_PRODUCT_TEST_URL', None)
+    n8n_webhook_url = getattr(settings, 'N8N_WEBHOOK_OPTIMIZE_PRODUCT_URL', None)
 
     try:
         # 发送请求给 n8n
