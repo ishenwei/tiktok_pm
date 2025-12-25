@@ -256,6 +256,7 @@ def update_product_api(request):
             return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
 
         p_id = data.get('product_id')
+        print("product_id: ", p_id)
         # 获取模型名称，默认为 unknown
         model_used = data.get('model_name', 'unknown-model')
 
@@ -274,7 +275,7 @@ def update_product_api(request):
                 zh_list = data_list_zh if isinstance(data_list_zh, list) else []
                 en_list = data_list_en if isinstance(data_list_en, list) else []
                 length = max(len(zh_list), len(en_list))
-
+                print("length: ", length)
                 for i in range(length):
                     AIContentItem.objects.create(
                         product=product,
