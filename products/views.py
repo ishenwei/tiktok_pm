@@ -274,16 +274,40 @@ def update_product_api(request):
             AIContentItem.objects.filter(product=product, status='draft').delete()
 
             def create_items(data_list_zh, data_list_en, type_key):
-                zh_list = data_list_zh if isinstance(data_list_zh, list) else []
-                en_list = data_list_en if isinstance(data_list_en, list) else []
+                # -------------------------------------------------------
+                # 修复逻辑：兼容 String 和 List
+                # -------------------------------------------------------
+
+                # 处理中文输入
+                if isinstance(data_list_zh, list):
+                    zh_list = data_list_zh
+                elif isinstance(data_list_zh, str) and data_list_zh.strip():
+                    # 如果是字符串且不为空，转换成单元素列表
+                    zh_list = [data_list_zh]
+                else:
+                    zh_list = []
+
+                # 处理英文输入
+                if isinstance(data_list_en, list):
+                    en_list = data_list_en
+                elif isinstance(data_list_en, str) and data_list_en.strip():
+                    # 如果是字符串且不为空，转换成单元素列表
+                    en_list = [data_list_en]
+                else:
+                    en_list = []
+
+                # -------------------------------------------------------
+
                 length = max(len(zh_list), len(en_list))
-                print("length: ", length)
+                print(f"Type: {type_key}, Length: {length}")  # 打印调试
+
                 for i in range(length):
                     AIContentItem.objects.create(
                         product=product,
-                        ai_model=model_used,  # 存储模型名称
+                        ai_model=model_used,
                         content_type=type_key,
                         option_index=i + 1,
+                        # 安全获取索引，越界则填空字符串
                         content_zh=zh_list[i] if i < len(zh_list) else "",
                         content_en=en_list[i] if i < len(en_list) else ""
                     )
@@ -292,8 +316,8 @@ def update_product_api(request):
             create_items(data.get('desc_zh'), data.get('desc_en'), 'desc')
             create_items(data.get('script_zh'), data.get('script_en'), 'script')
             create_items(data.get('voice_zh'), data.get('voice_en'), 'voice')
-            create_items([], data.get('img_p_en'), 'img_prompt')
-            create_items([], data.get('vid_p_en'), 'vid_prompt')
+            create_items(data.get('img_p_zh'), data.get('img_p_en'), 'img_prompt')
+            create_items(data.get('vid_p_zh'), data.get('vid_p_en'), 'vid_prompt')
 
         return JsonResponse({'status': 'success', 'model': model_used})
 
