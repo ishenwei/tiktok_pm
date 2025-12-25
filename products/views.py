@@ -250,8 +250,10 @@ def _extract_product_data(product):
 @require_POST
 def update_product_api(request):
     API_SECRET = "tk_n8n_update_2025_safe"
+    print("API_SECRET: ", API_SECRET)
     try:
         data = json.loads(request.body)
+        print("data: ", data)
         if data.get('api_key') != API_SECRET:
             return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
 
