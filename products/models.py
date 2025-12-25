@@ -364,7 +364,7 @@ class AIContentItem(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='ai_content_items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='ai_items')
 
     # 新增：AI 模型类型字段
     # 示例值: 'gemini-2.0-flash', 'gpt-4o', 'claude-3-5-sonnet'
