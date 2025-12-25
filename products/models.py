@@ -2,6 +2,7 @@
 from django.db.models.functions import Now
 from .utils import json_to_html, save_html_file
 from django.db import models
+import uuid
 
 # ----------------------------------------------------------------------
 # Table: Store
@@ -346,3 +347,45 @@ class ProductTagDefinition(models.Model):
         verbose_name = 'Tag Definition'
         verbose_name_plural = 'Tag Definitions'
         db_table = 'product_tags'
+
+
+
+
+# ----------------------------------------------------------------------
+# Table: ai content item
+# ----------------------------------------------------------------------
+class AIContentItem(models.Model):
+    TYPE_CHOICES = [
+        ('desc', '产品描述优化'),
+        ('script', '视频拍摄脚本'),
+        ('voice', '视频配音文案'),
+        ('img_prompt', '图片生成提示词'),
+        ('vid_prompt', '视频制作提示词'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='ai_content_items')
+
+    # 新增：AI 模型类型字段
+    # 示例值: 'gemini-2.0-flash', 'gpt-4o', 'claude-3-5-sonnet'
+    ai_model = models.CharField(max_length=50, verbose_name="生成模型", db_index=True)
+
+    content_type = models.CharField(max_length=20, choices=TYPE_CHOICES, db_index=True)
+    content_zh = models.TextField(verbose_name="中文内容", blank=True)
+    content_en = models.TextField(verbose_name="英文内容", blank=True)
+
+    option_index = models.IntegerField(default=1)
+    status = models.CharField(max_length=20, default='draft', db_index=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', 'content_type', 'option_index']
+        # 增加复合索引，提高查询特定产品下特定模型生成的脚本的速度
+        indexes = [
+            models.Index(fields=['product', 'ai_model', 'content_type']),
+        ]
+        db_table = 'ai_content_items'
+
+    def __str__(self):
+        return f"[{self.ai_model}] {self.get_content_type_display()} - {self.option_index}"

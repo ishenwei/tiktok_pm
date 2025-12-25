@@ -14,7 +14,7 @@ from django.contrib import admin
 from django_q.tasks import async_task
 
 # 导入模型和序列化器
-from .models import Product, ProductVariation
+from .models import Product, ProductVariation, AIContentItem
 from .serializers import ProductSerializer, ProductVariationSerializer
 
 # 导入任务函数
@@ -246,66 +246,53 @@ def _extract_product_data(product):
 # ============================================================
 # 接收 n8n 回调 API (新增)
 # ============================================================
-@csrf_exempt  # 必须：允许 n8n 无 CSRF Token 访问
-@require_POST  # 必须：只允许 POST 请求
+@csrf_exempt
+@require_POST
 def update_product_api(request):
-    """
-    供 n8n 调用的 Webhook 回调接口。
-    接收 JSON: {"product_id": "...", "desc_1": "...", "api_key": "..."}
-    """
-    # 建议将密钥移至 settings.py，这里为了演示直接定义
     API_SECRET = "tk_n8n_update_2025_safe"
-
     try:
         data = json.loads(request.body)
+        if data.get('api_key') != API_SECRET:
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
 
-        # 1. 安全校验
-        req_key = data.get('api_key')
-        if req_key != API_SECRET:
-            return JsonResponse({'status': 'error', 'message': 'Invalid API Key'}, status=403)
-
-        # 2. 获取参数
-        # 注意：这里接收的是 product_id，对应你的 source_id (你在 _extract_product_data 里把 source_id 传给了 n8n)
         p_id = data.get('product_id')
-        desc_1 = data.get('desc_1')
+        # 获取模型名称，默认为 unknown
+        model_used = data.get('model_name', 'unknown-model')
 
-        # 如果 n8n 还能生成 desc_2，也可以接收
-        desc_2 = data.get('desc_2')
-
-        if not p_id:
-            return JsonResponse({'status': 'error', 'message': 'Missing product_id'}, status=400)
-
-        # 3. 查找产品
-        # 优先尝试用 source_id 查找 (因为导出时你给 n8n 的是 source_id)
-        product = Product.objects.filter(source_id=p_id).first()
-
-        # 如果找不到，尝试用主键 ID 查找 (兼容性)
-        if not product and str(p_id).isdigit():
-            product = Product.objects.filter(pk=p_id).first()
-
+        product = Product.objects.filter(source_id=p_id).first() or Product.objects.filter(pk=p_id).first()
         if not product:
-            return JsonResponse({'status': 'error', 'message': f'Product {p_id} not found'}, status=404)
+            return JsonResponse({'status': 'error', 'message': 'Product not found'}, status=404)
 
-        # 4. 更新字段
-        updated_fields = []
-        if desc_1:
-            product.description_1 = desc_1
-            updated_fields.append('description_1')
+        from django.db import transaction
+        with transaction.atomic():
+            # 这里的删除策略可以根据需求调整：
+            # 是删除该产品所有的旧草稿，还是只删除该产品下同一个模型生成的旧草稿？
+            # 建议：只删除该产品同类型的旧草稿，保留不同模型的对比数据
+            AIContentItem.objects.filter(product=product, status='draft').delete()
 
-        if desc_2:
-            product.description_2 = desc_2
-            updated_fields.append('description_2')
+            def create_items(data_list_zh, data_list_en, type_key):
+                zh_list = data_list_zh if isinstance(data_list_zh, list) else []
+                en_list = data_list_en if isinstance(data_list_en, list) else []
+                length = max(len(zh_list), len(en_list))
 
-        if updated_fields:
-            product.save()
-            return JsonResponse({
-                'status': 'success',
-                'message': f'Updated {", ".join(updated_fields)} for product {p_id}'
-            })
-        else:
-            return JsonResponse({'status': 'warning', 'message': 'No fields provided to update'}, status=200)
+                for i in range(length):
+                    AIContentItem.objects.create(
+                        product=product,
+                        ai_model=model_used,  # 存储模型名称
+                        content_type=type_key,
+                        option_index=i + 1,
+                        content_zh=zh_list[i] if i < len(zh_list) else "",
+                        content_en=en_list[i] if i < len(en_list) else ""
+                    )
 
-    except json.JSONDecodeError:
-        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
+            # 映射字段（需与 n8n 节点的输出 JSON 匹配）
+            create_items(data.get('desc_zh'), data.get('desc_en'), 'desc')
+            create_items(data.get('script_zh'), data.get('script_en'), 'script')
+            create_items(data.get('voice_zh'), data.get('voice_en'), 'voice')
+            create_items([], data.get('img_p_en'), 'img_prompt')
+            create_items([], data.get('vid_p_en'), 'vid_prompt')
+
+        return JsonResponse({'status': 'success', 'model': model_used})
+
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

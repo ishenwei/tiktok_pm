@@ -21,6 +21,19 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+# =========================================================
+# Django Admin 界面自定义设置
+# =========================================================
+
+# 1. 修改页面顶部的大标题 (即 "Django administration" 那部分)
+admin.site.site_header = "TikTok电商选品管理系统"
+
+# 2. 修改浏览器标签页的标题 (Browser Tab Title)
+admin.site.site_title = "TikTok PM 后台"
+
+# 3. 修改 Admin 首页的副标题 (Index Title)
+admin.site.index_title = "欢迎使用选品管理工作台"
+
 urlpatterns = [
     path('admin/', admin.site.urls), # <--- 保持默认，不要包装！
     path('api/', include('products.urls')),

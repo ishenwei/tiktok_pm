@@ -17,7 +17,8 @@ from .models import (
     ProductVariation,
     ProductReview,
     Store,
-    ProductTagDefinition  # <--- 别忘了导入这个新模型
+    ProductTagDefinition,  # <--- 别忘了导入这个新模型
+    AIContentItem
 )
 
 # 导入视图和服务
@@ -26,7 +27,7 @@ from .services.product_media_downloader import download_all_product_images
 
 # 🌟 从新文件导入表单 🌟
 from .forms import ProductAdminForm
-
+from django.template.loader import render_to_string
 
 # ----------------------------------------------------------------------
 # Tags 管理配置 (Tag Definition)
@@ -456,6 +457,9 @@ class ProductAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
             'fields': ('input', 'raw_json', 'tags', 'colors', 'sizes', 'specifications', 'shop_performance_metrics'),
         }),
+        ('AI 智能工作台', {
+            'fields': ('ai_content_dashboard',)
+        }),
     )
 
     inlines = [ProductVariationInline, ProductImageInline, ProductVideoInline, ProductReviewInline]
@@ -475,6 +479,7 @@ class ProductAdmin(admin.ModelAdmin):
         'sizes_display',
         'specifications_display',
         'metrics_display',
+        'ai_content_dashboard',
     )
 
     # === 自定义 Actions 和 URLs (保持你原有的逻辑) ===
@@ -518,6 +523,38 @@ class ProductAdmin(admin.ModelAdmin):
         )
         return redirect(request.META.get("HTTP_REFERER"))
 
+    def ai_content_dashboard(self, obj):
+        """
+        渲染 AI 内容聚合面板
+        """
+        # 1. 获取该产品所有的 AI Item
+        items = obj.ai_items.all().order_by('option_index')
+
+        # 2. 按类型分组
+        # 定义我们需要展示的顺序和标题
+        groups_config = [
+            ('desc', '📝 描述优化'),
+            ('script', '🎬 视频脚本'),
+            ('voice', '🎙️ 配音文案'),
+            ('img_prompt', '🎨 图片提示词'),
+            ('vid_prompt', '🎥 视频提示词'),
+        ]
+
+        grouped_data = []
+        for type_key, type_name in groups_config:
+            # 筛选出属于该类型的 items
+            group_items = [i for i in items if i.content_type == type_key]
+            grouped_data.append((type_key, type_name, group_items))
+
+        # 3. 渲染模板
+        context = {'grouped_items': grouped_data}
+        html = render_to_string('admin/ai_dashboard_widget.html', context)
+
+        return mark_safe(html)
+
+    ai_content_dashboard.short_description = "AI 内容管理面板"
+    # 允许在添加页面为空 (防止报错)
+    ai_content_dashboard.allow_tags = True
 
 # ------------------------------------------------------------
 # 其他 Admin 注册 (保持不变)
@@ -534,6 +571,12 @@ class ProductVariationAdmin(admin.ModelAdmin):
 class ProductImageAdmin(admin.ModelAdmin):
     list_display = ('image_type', 'original_url', 'zipline_url')
     search_fields = ('image_type', 'original_url', 'zipline_url')
+    raw_id_fields = ('product',)
+
+
+@admin.register(AIContentItem)
+class AIContentItemAdmin(admin.ModelAdmin):
+    list_display = ('id', 'content_zh', 'content_en','created_at')
     raw_id_fields = ('product',)
 
 

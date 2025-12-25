@@ -1,0 +1,124 @@
+<style>
+    .ai-dashboard {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+    }
+    .ai-category {
+        margin-bottom: 20px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+    }
+    .ai-category h3 {
+        color: #333;
+        margin-top: 0;
+        font-size: 14px;
+        text-transform: uppercase;
+        font-weight: bold;
+        border-left: 4px solid #447e9b;
+        padding-left: 8px;
+    }
+    .ai-item-card {
+        background: white;
+        border: 1px solid #ddd;
+        padding: 10px;
+        margin-bottom: 8px;
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .ai-content {
+        flex: 1;
+        margin-right: 15px;
+        font-size: 13px;
+    }
+    .ai-actions button {
+        background-color: #447e9b;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: background 0.3s;
+    }
+    .ai-actions button:hover {
+        background-color: #36657c;
+    }
+    .status-tag {
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        background: #eee;
+        color: #666;
+        margin-right: 5px;
+    }
+</style>
+
+<div class="ai-dashboard">
+    {% for type_key, type_name, items in grouped_items %}
+        <div class="ai-category">
+            <h3>{{ type_name }}</h3>
+            {% if items %}
+                {% for item in items %}
+                <div class="ai-item-card">
+                    <div class="ai-content">
+                        <strong>Option {{ item.option_index }}</strong> <span class="status-tag">{{ item.status }}</span><br>
+                        <div style="color: #666; margin-top: 4px;">
+                            {{ item.content_en|truncatechars:100 }}
+                        </div>
+                    </div>
+                    <div class="ai-actions">
+                        <button type="button" onclick="triggerAiTask('{{ item.id }}', this)">
+                            {% if type_key == 'script' %} 🎬 生成视频
+                            {% elif type_key == 'img_prompt' %} 🎨 生成图片
+                            {% else %} 🚀 执行操作
+                            {% endif %}
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: #999; font-size: 12px;">暂无生成内容</p>
+            {% endif %}
+        </div>
+    {% endfor %}
+</div>
+
+<script>
+function triggerAiTask(itemId, btnElement) {
+    if(!confirm("确定要使用此内容触发后续 AI 任务吗？")) return;
+
+    const originalText = btnElement.innerText;
+    btnElement.innerText = "发送中...";
+    btnElement.disabled = true;
+
+    fetch(`/products/api/trigger-ai-task/${itemId}/`, {
+        method: 'POST',
+        headers: {
+            // 如果你的 Django 开启了 CSRF，这里可能需要提取 cookie，
+            // 但因为我们在 view 上加了 @csrf_exempt，这里可以暂时忽略，
+            // 生产环境建议加上 CSRF token。
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.status === 'success') {
+            alert("✅ 任务已成功发送给 n8n！");
+            btnElement.innerText = "已发送";
+            btnElement.style.backgroundColor = "#28a745";
+        } else {
+            alert("❌ 错误: " + data.message);
+            btnElement.innerText = originalText;
+            btnElement.disabled = false;
+        }
+    })
+    .catch(error => {
+        alert("❌ 网络错误");
+        btnElement.innerText = originalText;
+        btnElement.disabled = false;
+    });
+}
+</script>
