@@ -1,30 +1,31 @@
 # products/serializers.py
 
 from rest_framework import serializers
-from .models import Product, ProductVariation, ProductImage, ProductVideo
 
+from .models import Product, ProductImage, ProductVariation, ProductVideo
 
 # --- 辅助序列化器 (用于嵌套展示) ---
+
 
 class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
-        fields = ['id', 'image_type', 'original_url', 'zipline_url']
-        read_only_fields = ['id']
+        fields = ["id", "image_type", "original_url", "zipline_url"]
+        read_only_fields = ["id"]
 
 
 class ProductVideoSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductVideo
-        fields = ['id', 'video_type', 'original_url', 'zipline_url']
-        read_only_fields = ['id']
+        fields = ["id", "video_type", "original_url", "zipline_url"]
+        read_only_fields = ["id"]
 
 
 class ProductVariationSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductVariation
         # 排除 product_id 字段，因为它会被 ProductSerializer 自动处理
-        exclude = ['product', 'created_at']
+        exclude = ["product", "created_at"]
 
     # --- 核心产品序列化器 (用于 Product API) ---
 
@@ -39,7 +40,7 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         # 排除 'input', 'raw_json' 等大型或内部字段，简化常用 API 响应
         # 如果需要，可以创建 ProductDetailSerializer 来包含它们
-        exclude = ['raw_json', 'input', 'timestamp']
+        exclude = ["raw_json", "input", "timestamp"]
 
         # 确保 created_at, updated_at, source_id, seller_id 等关键字段可读
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ["id", "created_at", "updated_at"]

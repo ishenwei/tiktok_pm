@@ -1,47 +1,48 @@
 # products/admin.py
 
-from django.contrib import admin, messages
-from django.urls import path
-from django.shortcuts import redirect
-from django.utils.safestring import mark_safe
-from django.utils.html import format_html
 from django import forms
+from django.contrib import admin, messages
 from django.db import models
-from .utils import format_json_to_html
-
-# 导入模型
-from .models import (
-    Product,
-    ProductImage,
-    ProductVideo,
-    ProductVariation,
-    ProductReview,
-    Store,
-    ProductTagDefinition,  # <--- 别忘了导入这个新模型
-    AIContentItem
-)
-
-# 导入视图和服务
-from .views import product_fetch_view, export_product_json_view, n8n_analyze_view
-from .services.product_media_downloader import download_all_product_images
+from django.shortcuts import redirect
+from django.template.loader import render_to_string
+from django.urls import path
+from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 
 # 🌟 从新文件导入表单 🌟
 from .forms import ProductAdminForm
-from django.template.loader import render_to_string
+
+# 导入模型
+from .models import ProductTagDefinition  # <--- 别忘了导入这个新模型
+from .models import (
+    AIContentItem,
+    Product,
+    ProductImage,
+    ProductReview,
+    ProductVariation,
+    ProductVideo,
+    Store,
+)
+from .services.product_media_downloader import download_all_product_images
+from .utils import format_json_to_html
+
+# 导入视图和服务
+from .views import export_product_json_view, n8n_analyze_view, product_fetch_view
+
 
 # ----------------------------------------------------------------------
 # Tags 管理配置 (Tag Definition)
 # ----------------------------------------------------------------------
 @admin.register(ProductTagDefinition)
 class ProductTagDefinitionAdmin(admin.ModelAdmin):
-    list_display = ('name', 'code', 'color_preview')
-    search_fields = ('name', 'code')
+    list_display = ("name", "code", "color_preview")
+    search_fields = ("name", "code")
 
     def color_preview(self, obj):
         """在列表页显示颜色圆点预览"""
         return format_html(
             '<div style="width:20px; height:20px; background:{}; border-radius:50%; border:1px solid #ccc;"></div>',
-            obj.color
+            obj.color,
         )
 
     color_preview.short_description = "Color"
@@ -51,8 +52,8 @@ class ProductTagDefinitionAdmin(admin.ModelAdmin):
 # Tags 过滤器 (用于 Product 列表页侧边栏)
 # ----------------------------------------------------------------------
 class TagListFilter(admin.SimpleListFilter):
-    title = 'Tags'
-    parameter_name = 'tags'
+    title = "Tags"
+    parameter_name = "tags"
 
     def lookups(self, request, model_admin):
         # 侧边栏显示所有可用标签
@@ -69,90 +70,111 @@ class TagListFilter(admin.SimpleListFilter):
 # Inline Classes (保持你原有的逻辑不变)
 # ----------------------------------------------------------------------
 
+
 class ProductImageInline(admin.TabularInline):
     model = ProductImage
-    fields = ('image_preview', 'image_type', 'original_url', 'zipline_url')
-    readonly_fields = ('image_type', 'image_preview',)
+    fields = ("image_preview", "image_type", "original_url", "zipline_url")
+    readonly_fields = (
+        "image_type",
+        "image_preview",
+    )
     extra = 0
 
     # 3. 🌟 关键修改：重写控件样式 (Widget Overrides)
     # 这段代码会强制把 TextField (多行) 变成 TextInput (单行)，并限制宽度和高度
     formfield_overrides = {
         models.TextField: {
-            'widget': forms.TextInput(attrs={
-                'style': 'width: 250px; height: 26px; font-size: 13px; padding: 2px 5px;'
-            })
+            "widget": forms.TextInput(
+                attrs={"style": "width: 250px; height: 26px; font-size: 13px; padding: 2px 5px;"}
+            )
         },
         models.URLField: {
-            'widget': forms.TextInput(attrs={
-                'style': 'width: 250px; height: 26px; font-size: 13px; padding: 2px 5px;'
-            })
+            "widget": forms.TextInput(
+                attrs={"style": "width: 250px; height: 26px; font-size: 13px; padding: 2px 5px;"}
+            )
         },
         models.CharField: {
-            'widget': forms.TextInput(attrs={
-                'style': 'width: 150px; height: 26px; font-size: 13px;'
-            })
+            "widget": forms.TextInput(
+                attrs={"style": "width: 150px; height: 26px; font-size: 13px;"}
+            )
         },
     }
 
     def image_preview(self, obj):
         if obj.original_url:
-            return mark_safe(f'''
+            return mark_safe(
+                f"""
                 <img src="{obj.original_url}" data-large-url="{obj.original_url}" 
                      class="image-clickable" style="max-width: 100px; max-height: 100px; cursor: pointer;" />
-            ''')
+            """
+            )
         return "No Image"
 
-    image_preview.short_description = 'Preview'
+    image_preview.short_description = "Preview"
 
 
 class ProductVideoInline(admin.TabularInline):
     model = ProductVideo
-    fields = ('video_type', 'original_url', 'zipline_url', 'created_at')
-    readonly_fields = ('created_at',)
+    fields = ("video_type", "original_url", "zipline_url", "created_at")
+    readonly_fields = ("created_at",)
     extra = 1
 
 
 class ProductVariationInline(admin.TabularInline):
     model = ProductVariation
-    fields = ('image_preview', 'sku', 'props_display', 'stock', 'final_price', 'currency', 'image_original_url',)
-    readonly_fields = ('sku', 'props_display', 'image_preview','currency',)
+    fields = (
+        "image_preview",
+        "sku",
+        "props_display",
+        "stock",
+        "final_price",
+        "currency",
+        "image_original_url",
+    )
+    readonly_fields = (
+        "sku",
+        "props_display",
+        "image_preview",
+        "currency",
+    )
     extra = 0
 
     # 3. 🌟 关键修改：重写控件样式 (Widget Overrides)
     # 这段代码会强制把 TextField (多行) 变成 TextInput (单行)，并限制宽度和高度
     formfield_overrides = {
         models.TextField: {
-            'widget': forms.TextInput(attrs={
-                'style': 'width: 250px; height: 26px; font-size: 13px; padding: 2px 5px;'
-            })
+            "widget": forms.TextInput(
+                attrs={"style": "width: 250px; height: 26px; font-size: 13px; padding: 2px 5px;"}
+            )
         },
         models.URLField: {
-            'widget': forms.TextInput(attrs={
-                'style': 'width: 250px; height: 26px; font-size: 13px; padding: 2px 5px;'
-            })
+            "widget": forms.TextInput(
+                attrs={"style": "width: 250px; height: 26px; font-size: 13px; padding: 2px 5px;"}
+            )
         },
         models.CharField: {
-            'widget': forms.TextInput(attrs={
-                'style': 'width: 150px; height: 26px; font-size: 13px;'
-            })
+            "widget": forms.TextInput(
+                attrs={"style": "width: 150px; height: 26px; font-size: 13px;"}
+            )
         },
         models.IntegerField: {
-            'widget': forms.TextInput(attrs={
-                'style': 'width: 50px; height: 26px; font-size: 13px; padding: 2px 5px;'
-            })
+            "widget": forms.TextInput(
+                attrs={"style": "width: 50px; height: 26px; font-size: 13px; padding: 2px 5px;"}
+            )
         },
     }
 
     def image_preview(self, obj):
         if obj.image_original_url:
-            return mark_safe(f'''
+            return mark_safe(
+                f"""
                 <img src="{obj.image_original_url}" data-large-url="{obj.image_original_url}" 
                      class="image-clickable" style="max-width: 100px; max-height: 100px; cursor: pointer;" />
-            ''')
+            """
+            )
         return "No Image"
 
-    image_preview.short_description = 'Preview'
+    image_preview.short_description = "Preview"
 
     def props_display(self, obj):
         # 🌟 直接调用工具函数，代码极其简洁
@@ -160,17 +182,27 @@ class ProductVariationInline(admin.TabularInline):
 
     props_display.short_description = "Variations"
 
+
 class ProductReviewInline(admin.TabularInline):
     model = ProductReview
-    classes = ('collapse',)
-    fields = ('reviewer_name', 'rating', 'review_date', 'review_text', 'images', 'zipline_images', 'created_at')
-    readonly_fields = ('created_at',)
+    classes = ("collapse",)
+    fields = (
+        "reviewer_name",
+        "rating",
+        "review_date",
+        "review_text",
+        "images",
+        "zipline_images",
+        "created_at",
+    )
+    readonly_fields = ("created_at",)
     extra = 0
 
 
 # ----------------------------------------------------------------------
 # Main Product Admin
 # ----------------------------------------------------------------------
+
 
 class ProductAdmin(admin.ModelAdmin):
     form = ProductAdminForm  # 使用 forms.py 中定义的带 Tags 的表单
@@ -180,22 +212,20 @@ class ProductAdmin(admin.ModelAdmin):
     # 🌟 修改 Media 类：添加 jquery CDN，并调整顺序 🌟
     class Media:
         css = {
-            'all': (
-                'admin/css/admin_image_modal.css',
-                '//cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css',
-                'admin/css/product_tags.css',
+            "all": (
+                "admin/css/admin_image_modal.css",
+                "//cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css",
+                "admin/css/product_tags.css",
             )
         }
         js = (
             # 1. 必须最先加载标准 jQuery (Select2 依赖它)
-            '//code.jquery.com/jquery-3.6.0.min.js',
-
+            "//code.jquery.com/jquery-3.6.0.min.js",
             # 2. 然后是 Select2
-            '//cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
-
+            "//cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js",
             # 3. 你的自定义脚本
-            'admin/js/admin_image_modal.js',
-            'admin/js/product_tags.js',
+            "admin/js/admin_image_modal.js",
+            "admin/js/product_tags.js",
         )
 
     # --- 列表页显示 Tags ---
@@ -236,13 +266,15 @@ class ProductAdmin(admin.ModelAdmin):
     def product_thumbnail(self, obj):
         img_url = obj.first_image_original_url
         if img_url:
-            return mark_safe(f'''
+            return mark_safe(
+                f"""
                 <img src="{img_url}" data-large-url="{img_url}" 
                      class="image-clickable" style="max-width: 60px; max-height: 60px; cursor: pointer;" />
-            ''')
+            """
+            )
         return "N/A"
 
-    product_thumbnail.short_description = '图片'
+    product_thumbnail.short_description = "图片"
     product_thumbnail.allow_tags = True
 
     def store_name(self, obj):
@@ -258,9 +290,9 @@ class ProductAdmin(admin.ModelAdmin):
     desc_html_link.short_description = "Desc html"
 
     def title_short(self, obj):
-        return obj.title[:50] + '...' if obj.title and len(obj.title) > 50 else obj.title
+        return obj.title[:50] + "..." if obj.title and len(obj.title) > 50 else obj.title
 
-    title_short.short_description = 'Title'
+    title_short.short_description = "Title"
 
     # ============================================================
     # 🌟 新增：产品图画廊 (Gallery) 显示方法
@@ -271,7 +303,7 @@ class ProductAdmin(admin.ModelAdmin):
 
         # 获取关联的所有图片 (根据你的模型，related_name='product_images')
         # 如果只想显示 'main' 类型的图片，可以加上 .filter(image_type='main')
-        images = obj.product_images.all().order_by('id')
+        images = obj.product_images.all().order_by("id")
 
         if not images.exists():
             return "暂无图片"
@@ -282,7 +314,7 @@ class ProductAdmin(admin.ModelAdmin):
         for img in images:
             if img.original_url:
                 # 使用 image-clickable 类来复用点击放大功能
-                img_tag = f'''
+                img_tag = f"""
                         <div style="border: 1px solid #ddd; padding: 2px; border-radius: 4px;">
                             <img src="{img.original_url}" 
                                  data-large-url="{img.original_url}" 
@@ -291,10 +323,10 @@ class ProductAdmin(admin.ModelAdmin):
                                  style="height: 100px; width: auto; object-fit: cover; cursor: pointer; display: block;" 
                             />
                         </div>
-                    '''
+                    """
                 html_content.append(img_tag)
 
-        html_content.append('</div>')
+        html_content.append("</div>")
         return mark_safe("".join(html_content))
 
     product_images_gallery.short_description = "Gallery Preview"
@@ -308,7 +340,7 @@ class ProductAdmin(admin.ModelAdmin):
             return "-"
 
         # 获取关联视频
-        videos = obj.product_videos.all().order_by('id')
+        videos = obj.product_videos.all().order_by("id")
 
         if not videos.exists():
             return "暂无视频"
@@ -325,7 +357,8 @@ class ProductAdmin(admin.ModelAdmin):
                 # 2. 添加 class="video-clickable" 供 JS 识别
                 # 3. 添加 data-video-url 存储真实播放地址
                 # 4. 叠加一个 CSS 绘制的播放按钮 (▶) 提升可点击感
-                html_content.append(f'''
+                html_content.append(
+                    f"""
                         <div style="position: relative; cursor: pointer; border: 1px solid #ddd; border-radius: 4px; overflow: hidden;"
                              class="video-clickable-wrapper"
                              data-video-url="{video_url}">
@@ -340,9 +373,10 @@ class ProductAdmin(admin.ModelAdmin):
                                 <span style="color: white; font-size: 30px; opacity: 0.9;">▶</span>
                             </div>
                         </div>
-                    ''')
+                    """
+                )
 
-        html_content.append('</div>')
+        html_content.append("</div>")
         return mark_safe("".join(html_content))
 
     product_videos_gallery.short_description = "Video Gallery"
@@ -372,28 +406,27 @@ class ProductAdmin(admin.ModelAdmin):
 
     metrics_display.short_description = "Shop Performance Metrics"
 
-
     # === 配置列表页 ===
     list_display = (
-        'product_thumbnail',
-        'source_id',
-        'title_short',
-        'tags_display',  # <--- 新增 Tag 列
-        'store',
-        'final_price',
-        'sold',
-        'available',
-        'In_stock',
-        'created_at'
+        "product_thumbnail",
+        "source_id",
+        "title_short",
+        "tags_display",  # <--- 新增 Tag 列
+        "store",
+        "final_price",
+        "sold",
+        "available",
+        "In_stock",
+        "created_at",
     )
 
-    list_display_links = ('source_id', 'title_short')
-    search_fields = ('source_id', 'title', 'category', 'seller_id')
+    list_display_links = ("source_id", "title_short")
+    search_fields = ("source_id", "title", "category", "seller_id")
 
     # === 配置过滤器 ===
     list_filter = (
         TagListFilter,  # <--- 新增 Tag 过滤器
-        'category',
+        "category",
     )
 
     list_per_page = 15
@@ -402,64 +435,98 @@ class ProductAdmin(admin.ModelAdmin):
     # 🌟 配置：更新 Fieldsets 布局
     # ============================================================
     fieldsets = (
-        ('Product Base Info', {
-            'fields': (
-                ('source_id', 'title', 'tags_selector'),
-                ('url', 'category', 'category_url', 'position'),
-
-                # --- 修改开始：使用 display 字段替换原始字段 ---
-                # 将 Colors 和 Sizes 并排显示
-                ('colors_display', 'sizes_display'),
-                # Specifications 通常较长，独占一行
-                'specifications_display',
-                # 运费保持原始或也格式化 (这里暂时保留原始)
-                'shipping_fee',
-            )
-        }),
-
-        ('Product Images', {
-            'fields': ('product_images_gallery',),
-        }),
-
+        (
+            "Product Base Info",
+            {
+                "fields": (
+                    ("source_id", "title", "tags_selector"),
+                    ("url", "category", "category_url", "position"),
+                    # --- 修改开始：使用 display 字段替换原始字段 ---
+                    # 将 Colors 和 Sizes 并排显示
+                    ("colors_display", "sizes_display"),
+                    # Specifications 通常较长，独占一行
+                    "specifications_display",
+                    # 运费保持原始或也格式化 (这里暂时保留原始)
+                    "shipping_fee",
+                )
+            },
+        ),
+        (
+            "Product Images",
+            {
+                "fields": ("product_images_gallery",),
+            },
+        ),
         # --- 新增 Video Section ---
-        ('Product Videos', {
-            'fields': ('product_videos_gallery',),
-        }),
+        (
+            "Product Videos",
+            {
+                "fields": ("product_videos_gallery",),
+            },
+        ),
         # -------------------------
-
-        ('Sell Status', {
-            'fields': (('available', 'In_stock'), ('sold',)),
-        }),
-
-        ('Price Settings', {
-            'fields': (
-                ('currency', 'initial_price', 'final_price', 'discount_percent'),
-                ('initial_price_low', 'initial_price_high'),
-                ('final_price_low', 'final_price_high'),
-            ),
-        }),
-
-        ('Seller Info', {
-            # --- 修改：替换 shop_performance_metrics ---
-            'fields': ('seller_id', 'metrics_display', 'store'),
-        }),
-
-        ('Descriptions', {
-            'fields': ('description', 'description_1', 'description_2', 'desc_detail', 'desc_detail_1',
-                       'desc_detail_2'),
-        }),
-        ('HTML Descriptions', {
-            'fields': ('desc_html_link', 'desc_html_path',),
-        }),
-
+        (
+            "Sell Status",
+            {
+                "fields": (("available", "In_stock"), ("sold",)),
+            },
+        ),
+        (
+            "Price Settings",
+            {
+                "fields": (
+                    ("currency", "initial_price", "final_price", "discount_percent"),
+                    ("initial_price_low", "initial_price_high"),
+                    ("final_price_low", "final_price_high"),
+                ),
+            },
+        ),
+        (
+            "Seller Info",
+            {
+                # --- 修改：替换 shop_performance_metrics ---
+                "fields": ("seller_id", "metrics_display", "store"),
+            },
+        ),
+        (
+            "Descriptions",
+            {
+                "fields": (
+                    "description",
+                    "description_1",
+                    "description_2",
+                    "desc_detail",
+                    "desc_detail_1",
+                    "desc_detail_2",
+                ),
+            },
+        ),
+        (
+            "HTML Descriptions",
+            {
+                "fields": (
+                    "desc_html_link",
+                    "desc_html_path",
+                ),
+            },
+        ),
         # 原始数据区域 (建议保留原始字段以便调试)
-        ('JSON Raw Data', {
-            'classes': ('collapse',),
-            'fields': ('input', 'raw_json', 'tags', 'colors', 'sizes', 'specifications', 'shop_performance_metrics'),
-        }),
-        ('AI 智能工作台', {
-            'fields': ('ai_content_dashboard',)
-        }),
+        (
+            "JSON Raw Data",
+            {
+                "classes": ("collapse",),
+                "fields": (
+                    "input",
+                    "raw_json",
+                    "tags",
+                    "colors",
+                    "sizes",
+                    "specifications",
+                    "shop_performance_metrics",
+                ),
+            },
+        ),
+        ("AI 智能工作台", {"fields": ("ai_content_dashboard",)}),
     )
 
     inlines = [ProductVariationInline, ProductImageInline, ProductVideoInline, ProductReviewInline]
@@ -467,19 +534,19 @@ class ProductAdmin(admin.ModelAdmin):
     # 🌟 配置：添加到只读字段列表 (必须！)
     # ============================================================
     readonly_fields = (
-        'source_id',
-        'desc_html_link',
-        'desc_html_path',
-        'created_at',
-        'updated_at',
-        'product_images_gallery',
-        'product_videos_gallery',
+        "source_id",
+        "desc_html_link",
+        "desc_html_path",
+        "created_at",
+        "updated_at",
+        "product_images_gallery",
+        "product_videos_gallery",
         # 新增的格式化字段
-        'colors_display',
-        'sizes_display',
-        'specifications_display',
-        'metrics_display',
-        'ai_content_dashboard',
+        "colors_display",
+        "sizes_display",
+        "specifications_display",
+        "metrics_display",
+        "ai_content_dashboard",
     )
 
     # === 自定义 Actions 和 URLs (保持你原有的逻辑) ===
@@ -487,7 +554,7 @@ class ProductAdmin(admin.ModelAdmin):
         urls = super().get_urls()
         app_label = self.model._meta.app_label
         model_name = self.model._meta.model_name
-        base_name = f'{app_label}_{model_name}'
+        base_name = f"{app_label}_{model_name}"
 
         custom_urls = [
             path(
@@ -497,14 +564,15 @@ class ProductAdmin(admin.ModelAdmin):
             ),
             # 🌟 新增 1: 导出 JSON
             path(
-                "<int:product_id>/export-json/", self.admin_site.admin_view(export_product_json_view),
-                 name=f"{base_name}_export_json"
+                "<int:product_id>/export-json/",
+                self.admin_site.admin_view(export_product_json_view),
+                name=f"{base_name}_export_json",
             ),
-
             # 🌟 新增 2: n8n AI 分析
             path(
-                "<int:product_id>/n8n-analyze/", self.admin_site.admin_view(n8n_analyze_view),
-                 name=f"{base_name}_n8n_analyze"
+                "<int:product_id>/n8n-analyze/",
+                self.admin_site.admin_view(n8n_analyze_view),
+                name=f"{base_name}_n8n_analyze",
             ),
             path(
                 "product_fetch/",
@@ -519,7 +587,7 @@ class ProductAdmin(admin.ModelAdmin):
         target_dir, summary = download_all_product_images(product)
         messages.success(
             request,
-            f"下载完成：商品图片 {summary['product_images']} 张，SKU 图片 {summary['variation_images']} 张，详情图片 {summary['desc_images']} 张。"
+            f"下载完成：商品图片 {summary['product_images']} 张，SKU 图片 {summary['variation_images']} 张，详情图片 {summary['desc_images']} 张。",
         )
         return redirect(request.META.get("HTTP_REFERER"))
 
@@ -528,16 +596,16 @@ class ProductAdmin(admin.ModelAdmin):
         渲染 AI 内容聚合面板
         """
         # 1. 获取该产品所有的 AI Item
-        items = obj.ai_items.all().order_by('option_index')
+        items = obj.ai_items.all().order_by("option_index")
 
         # 2. 按类型分组
         # 定义我们需要展示的顺序和标题
         groups_config = [
-            ('desc', '📝 描述优化'),
-            ('script', '🎬 视频脚本'),
-            ('voice', '🎙️ 配音文案'),
-            ('img_prompt', '🎨 图片提示词'),
-            ('vid_prompt', '🎥 视频提示词'),
+            ("desc", "📝 描述优化"),
+            ("script", "🎬 视频脚本"),
+            ("voice", "🎙️ 配音文案"),
+            ("img_prompt", "🎨 图片提示词"),
+            ("vid_prompt", "🎥 视频提示词"),
         ]
 
         grouped_data = []
@@ -547,8 +615,8 @@ class ProductAdmin(admin.ModelAdmin):
             grouped_data.append((type_key, type_name, group_items))
 
         # 3. 渲染模板
-        context = {'grouped_items': grouped_data}
-        html = render_to_string('admin/ai_dashboard_widget.html', context)
+        context = {"grouped_items": grouped_data}
+        html = render_to_string("admin/ai_dashboard_widget.html", context)
 
         return mark_safe(html)
 
@@ -556,55 +624,65 @@ class ProductAdmin(admin.ModelAdmin):
     # 允许在添加页面为空 (防止报错)
     ai_content_dashboard.allow_tags = True
 
+
 # ------------------------------------------------------------
 # 其他 Admin 注册 (保持不变)
 # ------------------------------------------------------------
 
+
 @admin.register(ProductVariation)
 class ProductVariationAdmin(admin.ModelAdmin):
-    list_display = ('sku', 'product', 'stock', 'final_price', 'updated_at')
-    search_fields = ('sku', 'product__source_id')
-    raw_id_fields = ('product',)
+    list_display = ("sku", "product", "stock", "final_price", "updated_at")
+    search_fields = ("sku", "product__source_id")
+    raw_id_fields = ("product",)
 
 
 @admin.register(ProductImage)
 class ProductImageAdmin(admin.ModelAdmin):
-    list_display = ('image_type', 'original_url', 'zipline_url')
-    search_fields = ('image_type', 'original_url', 'zipline_url')
-    raw_id_fields = ('product',)
+    list_display = ("image_type", "original_url", "zipline_url")
+    search_fields = ("image_type", "original_url", "zipline_url")
+    raw_id_fields = ("product",)
 
 
 @admin.register(AIContentItem)
 class AIContentItemAdmin(admin.ModelAdmin):
-    list_display = ('id', 'content_zh', 'content_en','created_at')
-    raw_id_fields = ('product',)
+    list_display = ("id", "content_zh", "content_en", "created_at")
+    raw_id_fields = ("product",)
 
 
 @admin.register(Store)
 class StoreAdmin(admin.ModelAdmin):
     # 1. 引入与 ProductAdmin 相同的静态文件，支持弹窗放大功能
     class Media:
-        css = {
-            'all': ('admin/css/admin_image_modal.css',)
-        }
-        js = ('admin/js/admin_image_modal.js',)
+        css = {"all": ("admin/css/admin_image_modal.css",)}
+        js = ("admin/js/admin_image_modal.js",)
 
     # 2. 定义 Badge 预览方法
     def badge_preview(self, obj):
         # 假设 badge 字段存储的是 URL 字符串
         if obj.badge:
-            return mark_safe(f'''
+            return mark_safe(
+                f"""
                     <img src="{obj.badge}" 
                          data-large-url="{obj.badge}" 
                          class="image-clickable" 
                          style="max-width: 50px; max-height: 50px; cursor: pointer; border-radius: 50%; border: 1px solid #ddd;" />
-                ''')
+                """
+            )
         return "-"
 
     badge_preview.short_description = "Badge"
 
     # 3. 将 badge_preview 添加到列表显示的最前面
-    list_display = ["badge_preview", "store_id", "name", "num_of_items", "rating", "num_sold", "followers"]
+    list_display = [
+        "badge_preview",
+        "store_id",
+        "name",
+        "num_of_items",
+        "rating",
+        "num_sold",
+        "followers",
+    ]
     # 🌟 核心修改：指定哪些字段作为详情页的链接 🌟
     # 这里我们指定 store_id 和 name 都可以点击
     list_display_links = ("store_id", "name")
@@ -630,7 +708,7 @@ class StoreAdmin(admin.ModelAdmin):
         "rating",
         "num_of_items",
         "num_sold",
-        "followers"
+        "followers",
     )
 
 

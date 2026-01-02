@@ -1,10 +1,11 @@
 import os
 import re
-import requests
-from urllib.parse import urlparse
-from django.conf import settings
 from pathlib import Path
-from typing import Dict, Any, Set, List  # 导入类型提示
+from typing import Any, Dict, List, Set  # 导入类型提示
+from urllib.parse import urlparse
+
+import requests
+from django.conf import settings
 
 # 用于匹配图片扩展名的正则表达式
 IMG_EXT_RE = re.compile(r"\.(jpg|jpeg|png|webp|gif)", re.I)
@@ -82,21 +83,16 @@ def download_all_product_images(product) -> (str, Dict[str, int]):
     """
     # 确保 product_id 是字符串，用于路径和文件名
     product_id = str(product.source_id)
-    store_name = str(product.store.name)
 
     # 1. 确定保存的基础目录
-    #base_save_dir = Path(settings.MEDIA_ROOT) / 'downloaded_media' / product_id
-    #base_save_dir.mkdir(parents=True, exist_ok=True)
+    # base_save_dir = Path(settings.MEDIA_ROOT) / 'downloaded_media' / product_id
+    # base_save_dir.mkdir(parents=True, exist_ok=True)
     base_download_root = settings.PRODUCT_MEDIA_DOWNLOAD_ROOT
-    base_save_dir = Path(base_download_root)  / product_id
+    base_save_dir = Path(base_download_root) / product_id
 
     # 2. 初始化计数器和汇总数据
     global_image_counter = 1
-    summary = {
-        'product_images': 0,
-        'variation_images': 0,
-        'desc_images': 0
-    }
+    summary = {"product_images": 0, "variation_images": 0, "desc_images": 0}
 
     # 用于存放所有需要下载的 URL，按收集顺序排列
     urls_to_download: List[str] = []
@@ -105,24 +101,24 @@ def download_all_product_images(product) -> (str, Dict[str, int]):
 
     # A. 收集产品图片 (ProductImage)
     # 使用正确的反向关联名称 'product_images'
-    product_images = product.product_images.all().order_by('id')
+    product_images = product.product_images.all().order_by("id")
     product_urls = [img.original_url for img in product_images if img.original_url]
     urls_to_download.extend(product_urls)
-    summary['product_images'] = len(product_urls)
+    summary["product_images"] = len(product_urls)
 
     # B. 收集 SKU 图片 (ProductVariation)
     # 使用正确的反向关联名称 'product_variations'
-    variation_images = product.product_variations.all().order_by('id')
+    variation_images = product.product_variations.all().order_by("id")
     variation_urls = [v.image_original_url for v in variation_images if v.image_original_url]
     urls_to_download.extend(variation_urls)
-    summary['variation_images'] = len(variation_urls)
+    summary["variation_images"] = len(variation_urls)
 
     # C. 收集详情图 (Desc Detail Images)
     desc_urls: Set[str] = set()
     if product.desc_detail:
         desc_urls = extract_images_from_desc_detail(product.desc_detail)
         urls_to_download.extend(list(desc_urls))
-        summary['desc_images'] = len(desc_urls)
+        summary["desc_images"] = len(desc_urls)
 
     # 3. 去重并下载
 
@@ -136,7 +132,7 @@ def download_all_product_images(product) -> (str, Dict[str, int]):
 
         # 如果扩展名无效或缺失，则使用 .jpeg
         if not IMG_EXT_RE.search(ext):
-            ext = '.jpeg'
+            ext = ".jpeg"
 
         new_filename = f"{product_id}_{global_image_counter}{ext}"
         current_save_dir = base_save_dir
@@ -160,7 +156,8 @@ def download_all_product_images(product) -> (str, Dict[str, int]):
 # 辅助函数：清理文件名（已不再用于最终文件名，但保留以防不时之需）
 # ----------------------------------------------------------------------
 
+
 def clean_filename(original_filename):
     """清理文件名中的非法字符 (现在主要通过顺序重命名来避免)"""
-    cleaned_name = re.sub(ILLEGAL_CHARS, '_', original_filename)
+    cleaned_name = re.sub(ILLEGAL_CHARS, "_", original_filename)
     return cleaned_name.strip()

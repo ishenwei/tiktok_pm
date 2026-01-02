@@ -1,22 +1,22 @@
 import logging
-import json
-import requests
 import mimetypes
 from datetime import datetime
-from django.db import transaction
+
+import requests
 from django.conf import settings
+from django.db import transaction
 from django.utils.timezone import make_aware
 
 # 引入你的模型
 from products.models import (
     Product,
-    Store,
     ProductImage,
-    ProductVideo,
+    ProductReview,
     ProductVariation,
-    ProductReview
+    ProductVideo,
+    Store,
 )
-from products.utils import save_html_file, json_to_html
+from products.utils import json_to_html, save_html_file
 
 logger = logging.getLogger(__name__)
 
@@ -25,16 +25,21 @@ logger = logging.getLogger(__name__)
 # 1. 媒体处理工具 (保留原逻辑)
 # ==========================================
 
+
 def guess_mime(filename):
     mime, _ = mimetypes.guess_type(filename)
-    if mime: return mime
+    if mime:
+        return mime
     ext = filename.lower().split(".")[-1]
-    return {"jpg": "image/jpeg", "png": "image/png", "mp4": "video/mp4"}.get(ext, "application/octet-stream")
+    return {"jpg": "image/jpeg", "png": "image/png", "mp4": "video/mp4"}.get(
+        ext, "application/octet-stream"
+    )
 
 
 def download_media(url):
     """下载远程媒体文件，返回二进制内容和文件名"""
-    if not url: return None, None
+    if not url:
+        return None, None
     try:
         resp = requests.get(url, stream=True, timeout=30)
         if resp.status_code != 200:
@@ -43,7 +48,8 @@ def download_media(url):
 
         # 提取文件名
         filename = url.split("?")[0].split("/")[-1]
-        if not filename: filename = "temp_file"
+        if not filename:
+            filename = "temp_file"
 
         return resp.content, filename
     except Exception as e:
@@ -53,8 +59,8 @@ def download_media(url):
 
 def upload_to_zipline(file_bytes, filename):
     """上传到 Zipline 图床"""
-    upload_url = getattr(settings, 'ZIPLINE_UPLOAD_URL', None)
-    api_key = getattr(settings, 'ZIPLINE_API_KEY', None)
+    upload_url = getattr(settings, "ZIPLINE_UPLOAD_URL", None)
+    api_key = getattr(settings, "ZIPLINE_API_KEY", None)
 
     if not upload_url or not api_key:
         return None
@@ -93,31 +99,34 @@ def process_media_url(original_url, download_flag):
 # 2. 数据清洗工具
 # ==========================================
 
+
 def _clean_price(value):
-    if value is None or value == "": return None
+    if value is None or value == "":
+        return None
     try:
         if isinstance(value, str):
-            cleaned = value.replace('$', '').replace('£', '').replace(',', '').strip()
+            cleaned = value.replace("$", "").replace("£", "").replace(",", "").strip()
             return float(cleaned)
         return float(value)
-    except:
+    except (ValueError, TypeError):
         return None
 
 
 def _clean_int(value):
     try:
         return int(value)
-    except:
+    except (ValueError, TypeError):
         return 0
 
 
 def _parse_datetime(value):
     """处理时间字符串"""
-    if not value: return None
+    if not value:
+        return None
     try:
         # 处理带 Z 的 ISO 格式
-        value = value.replace('Z', '')
-        if 'T' in value:
+        value = value.replace("Z", "")
+        if "T" in value:
             dt = datetime.fromisoformat(value)
         else:
             dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
@@ -132,16 +141,17 @@ def _parse_datetime(value):
 # 3. 核心导入逻辑 (Django ORM 版)
 # ==========================================
 
+
 def import_products_from_list(products_list):
     """
     主入口：接收字典列表，使用 ORM 写入数据库
     """
     logger.info(f"开始导入 {len(products_list)} 个产品 (ORM Mode)...")
 
-    download_flag = getattr(settings, 'IMAGE_DOWNLOAD_FLAG', False)
+    download_flag = getattr(settings, "IMAGE_DOWNLOAD_FLAG", False)
 
     for item in products_list:
-        source_id = item.get('id')
+        source_id = item.get("id")
         if not source_id:
             continue
 
@@ -169,26 +179,28 @@ def import_products_from_list(products_list):
                 product.product_images.all().delete()
                 images = item.get("images") or []
                 for img_url in images:
-                    if not img_url: continue
+                    if not img_url:
+                        continue
                     zipline_url = process_media_url(img_url, download_flag)
                     ProductImage.objects.create(
                         product=product,
                         image_type="main",
                         original_url=img_url,
-                        zipline_url=zipline_url
+                        zipline_url=zipline_url,
                     )
 
                 # B. Videos
                 product.product_videos.all().delete()
                 videos = item.get("videos") or []
                 for vid_url in videos:
-                    if not vid_url: continue
+                    if not vid_url:
+                        continue
                     zipline_url = process_media_url(vid_url, download_flag)  # 视频也可以尝试上传
                     ProductVideo.objects.create(
                         product=product,
                         video_type="main",
                         original_url=vid_url,
-                        zipline_url=zipline_url
+                        zipline_url=zipline_url,
                     )
 
                 # C. Variations (SKUs)
@@ -209,7 +221,7 @@ def import_products_from_list(products_list):
                         currency=var.get("currency"),
                         discount_percent=_clean_price(var.get("discount_percent")),
                         image_original_url=var_img_url,
-                        image_zipline_url=var_zipline
+                        image_zipline_url=var_zipline,
                     )
 
                 # D. Reviews
@@ -222,7 +234,8 @@ def import_products_from_list(products_list):
                     if download_flag:
                         for r_img in r_images:
                             z_url = process_media_url(r_img, True)  # 强制下载评论图
-                            if z_url: r_zipline_urls.append(z_url)
+                            if z_url:
+                                r_zipline_urls.append(z_url)
 
                     ProductReview.objects.create(
                         product=product,
@@ -231,7 +244,7 @@ def import_products_from_list(products_list):
                         review_text=r.get("review"),
                         review_date=_parse_datetime(r.get("date")),
                         images=r_images,  # JSONField
-                        zipline_images=r_zipline_urls  # JSONField
+                        zipline_images=r_zipline_urls,  # JSONField
                     )
 
                 logger.info(f"Success: {source_id}")
@@ -245,16 +258,18 @@ def import_products_from_list(products_list):
 # 4. 内部 Helper (Models Mapping)
 # ==========================================
 
+
 def _handle_store(item):
     """处理店铺信息"""
     details = item.get("store_details") or {}
     url = details.get("url")
-    if not url: return None
+    if not url:
+        return None
 
     # 从 URL 提取 ID
     try:
         store_id = url.strip("/").split("/")[-1]
-    except:
+    except (AttributeError, IndexError):
         return None
 
     store, _ = Store.objects.update_or_create(
@@ -267,7 +282,7 @@ def _handle_store(item):
             "num_sold": _clean_int(details.get("num_sold")),
             "followers": _clean_int(details.get("followers")),
             "badge": details.get("badge"),
-        }
+        },
     )
     return store
 
@@ -281,50 +296,37 @@ def _handle_product(item, source_id, store, desc_html_path):
         "description": item.get("description"),
         "desc_detail": item.get("desc_detail"),  # JSONField
         "desc_html_path": desc_html_path,
-
         "available": bool(item.get("available")),
         "In_stock": bool(item.get("In_stock")),
-
         "currency": item.get("currency"),
         "initial_price": _clean_price(item.get("initial_price")),
         "final_price": _clean_price(item.get("final_price")),
         "discount_percent": _clean_price(item.get("discount_percent")),
-
         "initial_price_low": _clean_price(item.get("initial_price_low")),
         "initial_price_high": _clean_price(item.get("initial_price_high")),
         "final_price_low": _clean_price(item.get("final_price_low")),
         "final_price_high": _clean_price(item.get("final_price_high")),
-
         "sold": _clean_int(item.get("sold")),
         "position": _clean_int(item.get("position")),
-
         "colors": item.get("colors"),  # JSON
         "sizes": item.get("sizes"),  # JSON
         "shipping_fee": item.get("shipping_fee"),  # JSON
         "specifications": item.get("specifications"),  # JSON
-
         "videos": item.get("videos"),  # JSON 原始数据
         "related_videos": item.get("related_videos"),  # JSON
         "video_link": item.get("video_link"),
-
         "category": item.get("category"),
         "category_url": item.get("category_url"),
         "seller_id": item.get("seller_id"),
-
         # 注意: 这里使用你修正后的字段名 'product_rating'，而不是 'prodct_rating'
         # 如果数据库还没迁移，请确保 models.py 和数据库一致
         "product_rating": item.get("prodct_rating"),
-
         "promotion_items": item.get("promotion_items"),
         "shop_performance_metrics": item.get("Shop_performance_metrics"),
-
         "timestamp": _parse_datetime(item.get("timestamp")),
         "input": item.get("input"),
-        "raw_json": item
+        "raw_json": item,
     }
 
-    product, created = Product.objects.update_or_create(
-        source_id=source_id,
-        defaults=defaults
-    )
+    product, created = Product.objects.update_or_create(source_id=source_id, defaults=defaults)
     return product

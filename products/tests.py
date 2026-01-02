@@ -1,14 +1,13 @@
 # products/tests.py
 
-from django.test import TestCase, override_settings
-from unittest import mock
 import json
+from unittest import mock
+
 import requests
-import pymysql
+from django.test import TestCase, override_settings
 
 # 假设您的 tasks.py 和 importer_wrapper.py 路径是正确的
-from products.tasks import poll_bright_data_result, BRIGHT_DATA_DOWNLOAD_BASE_URL
-from products.importer_wrapper import start_import_process
+from products.tasks import BRIGHT_DATA_DOWNLOAD_BASE_URL, poll_bright_data_result
 
 # 模拟一个成功下载的产品列表 (JSON Lines 格式，模拟真实场景)
 MOCK_PRODUCT_DATA_LINES = (
@@ -74,16 +73,17 @@ class MockConnection:
 
 # products/tests.py (继续)
 
+
 # 覆盖 settings，使用一个模拟的数据库配置，确保它是 pymysql 风格
 @override_settings(
     DATABASES={
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': 'tiktok_products_mock',
-            'USER': 'root',
-            'PASSWORD': 'abcd1234',
-            'HOST': '192.168.3.17',
-            'PORT': 3306,
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": "tiktok_products_mock",
+            "USER": "root",
+            "PASSWORD": "abcd1234",
+            "HOST": "192.168.3.17",
+            "PORT": 3306,
         }
     }
 )
@@ -92,29 +92,22 @@ class ProductImportTests(TestCase):
     # -------------------------------------------------------------------
     # 测试 1: 模拟 Bright Data 状态查询和 JSON Lines 数据导入
     # -------------------------------------------------------------------
-    @mock.patch('products.importer_wrapper.pymysql.connect', return_value=MockConnection())
-    @mock.patch('products.tasks.requests.get')
-    @mock.patch('products.importer_wrapper.core.insert_product', return_value=123)
-    def test_poll_and_import_with_json_lines(self, mock_insert_product, mock_requests_get, mock_pymysql_connect):
-        snapshot_id = 'sd_mibdfnwodfw6xxkv1'
+    @mock.patch("products.importer_wrapper.pymysql.connect", return_value=MockConnection())
+    @mock.patch("products.tasks.requests.get")
+    @mock.patch("products.importer_wrapper.core.insert_product", return_value=123)
+    def test_poll_and_import_with_json_lines(
+        self, mock_insert_product, mock_requests_get, mock_pymysql_connect
+    ):
+        snapshot_id = "sd_mibdfnwodfw6xxkv1"
 
         # 1. 设置状态查询响应 (返回 finished)
-        mock_status_response = MockResponse(
-            status_code=200,
-            json_data={'status': 'ready'}
-        )
+        mock_status_response = MockResponse(status_code=200, json_data={"status": "ready"})
 
         # 2. 设置下载数据响应 (返回 JSON Lines 格式文本)
-        mock_download_response = MockResponse(
-            status_code=200,
-            text_data=MOCK_PRODUCT_DATA_LINES
-        )
+        mock_download_response = MockResponse(status_code=200, text_data=MOCK_PRODUCT_DATA_LINES)
 
         # 模拟 requests.get 调用：第一次查状态，第二次下载数据
-        mock_requests_get.side_effect = [
-            mock_status_response,
-            mock_download_response
-        ]
+        mock_requests_get.side_effect = [mock_status_response, mock_download_response]
 
         # ACT (执行 poll_bright_data_result)
         result = poll_bright_data_result(snapshot_id)
@@ -128,7 +121,9 @@ class ProductImportTests(TestCase):
         # ASSERT 3: 验证 core.insert_product 被调用的次数 (MOCK_PRODUCT_DATA_LINES 有 3 个产品)
         expected_calls = 3
         actual_calls = mock_insert_product.call_count
-        self.assertEqual(actual_calls, expected_calls, f"insert_product 应该被调用 {expected_calls} 次")
+        self.assertEqual(
+            actual_calls, expected_calls, f"insert_product 应该被调用 {expected_calls} 次"
+        )
 
         # ASSERT 4: 验证 download URL 是否正确
         expected_download_url = f"{BRIGHT_DATA_DOWNLOAD_BASE_URL}{snapshot_id}?format=json"
@@ -138,29 +133,22 @@ class ProductImportTests(TestCase):
     # -------------------------------------------------------------------
     # 测试 2: 模拟 Bright Data 状态查询和 JSON 数组数据导入
     # -------------------------------------------------------------------
-    @mock.patch('products.importer_wrapper.pymysql.connect', return_value=MockConnection())
-    @mock.patch('products.tasks.requests.get')
-    @mock.patch('products.importer_wrapper.core.insert_product', return_value=123)
-    def test_poll_and_import_with_json_array(self, mock_insert_product, mock_requests_get, mock_pymysql_connect):
-        snapshot_id = 'sd_mibdfnwodfw6xxkv1'
+    @mock.patch("products.importer_wrapper.pymysql.connect", return_value=MockConnection())
+    @mock.patch("products.tasks.requests.get")
+    @mock.patch("products.importer_wrapper.core.insert_product", return_value=123)
+    def test_poll_and_import_with_json_array(
+        self, mock_insert_product, mock_requests_get, mock_pymysql_connect
+    ):
+        snapshot_id = "sd_mibdfnwodfw6xxkv1"
 
         # 1. 设置状态查询响应 (返回 finished)
-        mock_status_response = MockResponse(
-            status_code=200,
-            json_data={'status': 'ready'}
-        )
+        mock_status_response = MockResponse(status_code=200, json_data={"status": "ready"})
 
         # 2. 设置下载数据响应 (返回 JSON 数组数据)
-        mock_download_response = MockResponse(
-            status_code=200,
-            json_data=MOCK_PRODUCT_DATA_ARRAY
-        )
+        mock_download_response = MockResponse(status_code=200, json_data=MOCK_PRODUCT_DATA_ARRAY)
 
         # 模拟 requests.get 调用：第一次查状态，第二次下载数据
-        mock_requests_get.side_effect = [
-            mock_status_response,
-            mock_download_response
-        ]
+        mock_requests_get.side_effect = [mock_status_response, mock_download_response]
 
         # ACT (执行 poll_bright_data_result)
         result = poll_bright_data_result(snapshot_id)
@@ -171,4 +159,6 @@ class ProductImportTests(TestCase):
         # ASSERT 2: 验证 core.insert_product 被调用的次数 (MOCK_PRODUCT_DATA_ARRAY 有 2 个产品)
         expected_calls = 2
         actual_calls = mock_insert_product.call_count
-        self.assertEqual(actual_calls, expected_calls, f"insert_product 应该被调用 {expected_calls} 次")
+        self.assertEqual(
+            actual_calls, expected_calls, f"insert_product 应该被调用 {expected_calls} 次"
+        )
