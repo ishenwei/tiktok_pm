@@ -24,17 +24,17 @@ class ProductVideoSerializer(serializers.ModelSerializer):
 class ProductVariationSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductVariation
-        # 排除 product_id 字段，因为它会被 ProductSerializer 自动处理
-        exclude = ["product", "created_at"]
+        fields = ["id", "product", "sku", "final_price", "stock", "created_at"]
+        read_only_fields = ["id", "created_at"]
 
     # --- 核心产品序列化器 (用于 Product API) ---
 
 
 class ProductSerializer(serializers.ModelSerializer):
     # 将关联模型嵌套进来，方便 n8n 一次性获取所有信息
-    images = ProductImageSerializer(many=True, read_only=True)  # related_name='images'
-    variations = ProductVariationSerializer(many=True, read_only=True)  # related_name='variations'
-    videos_list = ProductVideoSerializer(many=True, read_only=True)  # related_name='videos_list'
+    images = ProductImageSerializer(many=True, read_only=True, source="product_images")
+    variations = ProductVariationSerializer(many=True, read_only=True, source="product_variations")
+    videos_list = ProductVideoSerializer(many=True, read_only=True, source="product_videos")
 
     class Meta:
         model = Product

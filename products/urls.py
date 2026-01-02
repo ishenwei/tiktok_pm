@@ -18,6 +18,10 @@ urlpatterns = [
     # 🔴 修改前: path('api/update_product/', views.update_product_api, ...)
     # 🟢 修改后: 去掉 'api/'，因为主路由已经包含了它
     path("update_product/", views.update_product_api, name="update_product_api"),
-    # (可选) 如果你需要通过 URL 触发 n8n 分析，可以保留之前的路由
-    # path('n8n-analyze/<int:product_id>/', views.n8n_analyze_view, name='n8n_analyze'),
+    # 导出产品 JSON
+    path("export/<int:product_id>/", views.export_product_json_view, name="export_product_json"),
+    # n8n 分析功能
+    path("n8n-analyze/<int:product_id>/", views.n8n_analyze_view, name="n8n_analyze"),
+    # 产品抓取视图
+    path("fetch/", views.product_fetch_view, name="product_fetch"),
 ]

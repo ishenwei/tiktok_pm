@@ -51,14 +51,14 @@ class ProductViewSet(viewsets.ModelViewSet):
     ]
 
     # 启用快速搜索 (要求 3.8)
-    search_fields = ["=source_id", "title", "store_name", "description"]  # 精确匹配
+    search_fields = ["=source_id", "title", "description"]  # 精确匹配
 
     def get_queryset(self):
         # 预加载关联数据以解决 N+1 查询问题
         return (
             Product.objects.all()
-            .select_related()
-            .prefetch_related("images", "variations", "videos_list")
+            .select_related("store")
+            .prefetch_related("product_images", "product_variations", "product_videos")
             .order_by("-updated_at")
         )
 
@@ -96,6 +96,7 @@ class ProductUrlsForm(forms.Form):
         label="产品 URL 列表",
         widget=forms.Textarea(attrs={"rows": 10, "placeholder": "一行一个 TikTok 产品 URL"}),
         help_text="请输入要抓取的 TikTok 产品完整 URL，每行一个。",
+        required=False,
     )
 
     def clean_product_urls(self):
@@ -266,13 +267,24 @@ def update_product_api(request):
 
         p_id = data.get("product_id")
         logger.info(f"product_id: {p_id}")
+        
+        if not p_id:
+            return JsonResponse({"status": "error", "message": "Product ID is required"}, status=400)
+        
         # 获取模型名称，默认为 unknown
         model_used = data.get("model_name", "unknown-model")
 
-        product = (
-            Product.objects.filter(source_id=p_id).first()
-            or Product.objects.filter(pk=p_id).first()
-        )
+        product = None
+        try:
+            # 尝试通过 source_id 查找
+            product = Product.objects.filter(source_id=p_id).first()
+            # 如果没找到，尝试通过主键查找
+            if not product:
+                product = Product.objects.filter(pk=p_id).first()
+        except (ValueError, TypeError):
+            # 如果 p_id 不是有效的数字，继续使用 None
+            pass
+            
         if not product:
             return JsonResponse({"status": "error", "message": "Product not found"}, status=404)
 
@@ -332,5 +344,8 @@ def update_product_api(request):
 
         return JsonResponse({"status": "success", "model": model_used})
 
+    except json.JSONDecodeError:
+        return JsonResponse({"status": "error", "message": "Invalid JSON"}, status=400)
     except Exception as e:
+        logger.error(f"Error in update_product_api: {str(e)}", exc_info=True)
         return JsonResponse({"status": "error", "message": str(e)}, status=500)

@@ -1,6 +1,7 @@
 # Create your models here.
 import uuid
 
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.functions import Now
 
@@ -148,6 +149,15 @@ class Product(models.Model):
     def __str__(self):
         """返回对象在Admin后台的显示名称"""
         return f"{self.source_id}: {self.title[:50]}..."
+
+    def clean(self):
+        """验证产品数据"""
+        if self.final_price is not None and self.final_price < 0:
+            raise ValidationError({"final_price": "价格不能为负数"})
+        if self.initial_price is not None and self.initial_price < 0:
+            raise ValidationError({"initial_price": "价格不能为负数"})
+        if self.discount_percent is not None and self.discount_percent < 0:
+            raise ValidationError({"discount_percent": "折扣百分比不能为负数"})
 
     # ------------------------------------------------------------
     # 新增属性：获取第一张图片的 Original URL (用于列表页展示)
@@ -358,6 +368,11 @@ class ProductReview(models.Model):
 
     def __str__(self):
         return f"{self.product.source_id} - {self.reviewer_name} ({self.rating}星)"
+
+    def clean(self):
+        """验证评价数据"""
+        if self.rating is not None and (self.rating < 1 or self.rating > 5):
+            raise ValidationError({"rating": "评分必须在1到5之间"})
 
 
 # ----------------------------------------------------------------------
