@@ -1,11 +1,14 @@
 import json
-import requests  # <--- 确保安装了 requests: pip install requests
-from django.shortcuts import render, redirect, get_object_or_404 # <--- 关键补充
-from django.http import JsonResponse # <--- 导出 JSON 需要这个
+import logging
+import requests
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
 from rest_framework import viewsets, filters
 from django_filters.rest_framework import DjangoFilterBackend
 from django import forms
 from django.contrib import messages
+
+logger = logging.getLogger(__name__)
 
 # 🌟 1. 导入 admin 模块 (用于获取 sidebar context)
 from django.contrib import admin
@@ -29,7 +32,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     提供 Product 资源的 CRUD 操作 API。
     实现：快速搜索 (要求 3.8)，多条件过滤 (要求 3.9)
     """
-    queryset = Product.objects.all().order_by('-updated_at')
+    queryset = Product.objects.all()
     serializer_class = ProductSerializer
 
     # 启用过滤和搜索后端
@@ -118,7 +121,7 @@ def product_fetch_view(request):
         if form.is_valid():
             urls_list = form.cleaned_data['product_urls']
             collection_mode = form.cleaned_data['collection_mode']
-            print("collection_mode: ", collection_mode)
+            logger.info(f"collection_mode: {collection_mode}")
 
             # 触发异步任务
             async_task(
@@ -180,8 +183,8 @@ def n8n_analyze_view(request, product_id):
     product_data = _extract_product_data(product)
 
     n8n_webhook_url = getattr(settings, 'N8N_WEBHOOK_OPTIMIZE_PRODUCT_URL', None)
-    print("n8n_webhook_url: ", n8n_webhook_url)
-    print("product_data: ", product_data)
+    logger.info(f"n8n_webhook_url: {n8n_webhook_url}")
+    logger.debug(f"product_data: {product_data}")
 
     try:
         # 发送请求给 n8n
@@ -249,16 +252,16 @@ def _extract_product_data(product):
 @csrf_exempt
 @require_POST
 def update_product_api(request):
-    API_SECRET = "tk_n8n_update_2025_safe"
-    print("API_SECRET: ", API_SECRET)
+    API_SECRET = settings.N8N_API_SECRET
+    logger.info(f"API_SECRET: {API_SECRET}")
     try:
         data = json.loads(request.body)
-        print("data: ", data)
+        logger.debug(f"data: {data}")
         if data.get('api_key') != API_SECRET:
             return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
 
         p_id = data.get('product_id')
-        print("product_id: ", p_id)
+        logger.info(f"product_id: {p_id}")
         # 获取模型名称，默认为 unknown
         model_used = data.get('model_name', 'unknown-model')
 
@@ -299,7 +302,7 @@ def update_product_api(request):
                 # -------------------------------------------------------
 
                 length = max(len(zh_list), len(en_list))
-                print(f"Type: {type_key}, Length: {length}")  # 打印调试
+                logger.debug(f"Type: {type_key}, Length: {length}")
 
                 for i in range(length):
                     AIContentItem.objects.create(

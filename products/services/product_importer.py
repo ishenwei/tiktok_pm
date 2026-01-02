@@ -85,7 +85,7 @@ def process_media_url(original_url, download_flag):
         if file_bytes:
             zipline_url = upload_to_zipline(file_bytes, filename)
             if zipline_url:
-                print(f"    ☁ Zipline Uploaded: {zipline_url}")
+                logger.info(f"Zipline Uploaded: {zipline_url}")
     return zipline_url
 
 
@@ -136,7 +136,7 @@ def import_products_from_list(products_list):
     """
     主入口：接收字典列表，使用 ORM 写入数据库
     """
-    print(f"🚀 开始导入 {len(products_list)} 个产品 (ORM Mode)...")
+    logger.info(f"开始导入 {len(products_list)} 个产品 (ORM Mode)...")
 
     download_flag = getattr(settings, 'IMAGE_DOWNLOAD_FLAG', False)
 
@@ -148,7 +148,7 @@ def import_products_from_list(products_list):
         try:
             # 开启事务原子性：确保一个产品的所有数据（图片、变体）要么全成功，要么全失败
             with transaction.atomic():
-                print(f"📦 Processing: {source_id}")
+                logger.info(f"Processing: {source_id}")
 
                 # --- 1. 处理 Store ---
                 store = _handle_store(item)
@@ -234,10 +234,10 @@ def import_products_from_list(products_list):
                         zipline_images=r_zipline_urls  # JSONField
                     )
 
-                print(f"✅ Success: {source_id}")
+                logger.info(f"Success: {source_id}")
 
         except Exception as e:
-            print(f"❌ Error importing {source_id}: {e}")
+            logger.error(f"Error importing {source_id}: {e}")
             # transaction.atomic 会自动回滚
 
 

@@ -1,7 +1,10 @@
 # products/utils.py
 
 import os
+import logging
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 def json_to_html(json_data):
@@ -88,7 +91,7 @@ def save_html_file(source_id, html_content):
 
         return os.path.join(media_prefix, HTML_SUBDIR, filename)
     except Exception as e:
-        print(f"写入文件失败: {e}")
+        logger.error(f"写入文件失败: {e}")
         return None
 
 

@@ -10,19 +10,16 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
-from pathlib import Path # 确保顶部导入了 Path，如果您使用的是 Django 3.1+
-
-from django.conf.locale import tk
-from dotenv import load_dotenv # <-- 导入 load_dotenv
+from pathlib import Path
+from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 # ====== PyMySQL 兼容层 ======
 import pymysql
-pymysql.install_as_MySQLdb() # <--- 关键！让 Django 认为它正在使用 mysqlclient
+pymysql.install_as_MySQLdb()
 # ===========================
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-# 🌟 关键修正：使用 pathlib.Path 来定义 BASE_DIR 🌟
-# 这会创建一个 Path 对象，并使其支持 / 运算符
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # 定义媒体文件（动态生成文件）的 URL 前缀
@@ -41,10 +38,12 @@ load_dotenv(BASE_DIR / '.env')
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-^#h*@eehfevm+vcgoxuae460c!i5&or@sn@7!glhmip#hv(bbn'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    raise ImproperlyConfigured('DJANGO_SECRET_KEY environment variable is not set')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
@@ -262,6 +261,10 @@ BRIGHT_DATA_PARAM_LIMIT_PER_INPUT = "&limit_per_input=5"
 ZIPLINE_UPLOAD_URL = os.environ.get('ZIPLINE_UPLOAD_URL')
 ZIPLINE_API_KEY = os.environ.get('ZIPLINE_API_KEY')
 
+# N8N API Secret 配置
+N8N_API_SECRET = os.environ.get('N8N_API_SECRET')
+if not N8N_API_SECRET:
+    raise ImproperlyConfigured('N8N_API_SECRET environment variable is not set')
 
 # ==========================================================
 # 产品图片下载路径
