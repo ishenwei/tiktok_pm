@@ -209,7 +209,7 @@ REST_FRAMEWORK = {"DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.Dja
 
 # 1. STATIC_URL (用于浏览器访问，例如：/static/admin/css/...)
 # 这个设置在开发和生产环境中都需要
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 
 # 2. STATIC_ROOT (用于 collectstatic 命令)
 # 告诉 Django 将所有静态文件收集到项目根目录下的 'staticfiles' 文件夹中。
@@ -218,6 +218,12 @@ STATIC_URL = "static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 # 如果使用的是 Path：
 # STATIC_ROOT = Path(BASE_DIR) / 'staticfiles'
+
+# 3. STATICFILES_DIRS (用于存放额外的静态文件)
+# 告诉 Django 在哪里查找额外的静态文件（除了各个应用的 static 目录）
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, "static"),
+]
 
 # -------------------------------------------------------------
 # 产品导入自定义配置
