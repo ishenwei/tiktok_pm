@@ -18,13 +18,15 @@
 #     3. 按照菜单提示选择要执行的操作
 #
 # 依赖要求：
-#     - Docker
-#     - Docker Compose
+#     - Docker (版本 20.10+)
+#     - Docker Compose (作为 Docker CLI 插件，使用 'docker compose' 命令)
 #
 # 注意事项：
 #     - 需要在 docker-compose.yml 所在目录执行
 #     - 确保容器正在运行
 #     - 某些操作需要容器内存在相应的日志目录
+#     - 本脚本使用 'docker compose' 命令（新版 Docker Compose V2）
+#     - 如果使用旧版 docker-compose 命令，请将所有 'docker compose' 替换为 'docker-compose'
 #
 # ==========================================================
 
@@ -109,7 +111,7 @@ tail_logs() {
     echo "正在查看: $service_name 实时日志"
     echo "按 Ctrl+C 退出"
     echo "============================================================"
-    docker-compose logs -f --tail=50 $service
+    docker compose logs -f --tail=50 $service
 }
 
 # 函数：查看最近日志
@@ -144,7 +146,7 @@ show_recent_logs() {
     echo "============================================================"
     echo "正在查看: $service_name 最近 $lines 行日志"
     echo "============================================================"
-    docker-compose logs --tail=$lines $service
+    docker compose logs --tail=$lines $service
 }
 
 # 函数：搜索日志
@@ -182,7 +184,7 @@ search_logs() {
     echo "============================================================"
     echo "搜索结果: '$keyword'"
     echo "============================================================"
-    docker-compose logs | grep --color=always -i "$keyword"
+    docker compose logs | grep --color=always -i "$keyword"
 }
 
 # 函数：查看容器状态
@@ -216,13 +218,13 @@ show_container_status() {
     echo "============================================================"
     echo "容器状态"
     echo "============================================================"
-    docker-compose ps
+    docker compose ps
     echo ""
     
     echo "============================================================"
     echo "容器详细信息"
     echo "============================================================"
-    docker-compose ps -a
+    docker compose ps -a
 }
 
 # 函数：进入容器
@@ -263,15 +265,15 @@ enter_container() {
     case $choice in
         1)
             echo "进入 web 容器..."
-            docker-compose exec web /bin/bash
+            docker compose exec web /bin/bash
             ;;
         2)
             echo "进入 worker 容器..."
-            docker-compose exec worker /bin/bash
+            docker compose exec worker /bin/bash
             ;;
         3)
             echo "进入 nginx 容器..."
-            docker-compose exec nginx /bin/sh
+            docker compose exec nginx /bin/sh
             ;;
         *)
             echo "无效选项"
@@ -280,37 +282,6 @@ enter_container() {
 }
 
 # 函数：从容器复制日志文件
-#
-# 功能说明：
-#     将容器内的日志文件复制到本地目录，便于离线分析和归档
-#     支持复制 Django 应用日志和 Nginx 日志
-#
-# 参数说明：
-#     无（通过用户交互选择要复制日志的容器）
-#
-# 返回值：
-#     无（将日志文件复制到本地 ./docker_logs/ 目录）
-#
-# 使用示例：
-#     copy_logs_from_container
-#     # 然后选择要复制日志的容器（1-web, 2-worker, 3-nginx）
-#
-# 支持的容器和日志目录：
-#     1) web (Django + Gunicorn) - 复制 /app/logs/ 到 ./docker_logs/logs/
-#     2) worker (Django Q) - 复制 /app/logs/ 到 ./docker_logs/logs/
-#     3) nginx - 复制 /var/log/nginx/ 到 ./docker_logs/nginx/
-#
-# 输出位置：
-#     - Django 日志: ./docker_logs/logs/
-#     - Nginx 日志: ./docker_logs/nginx/
-#
-# 注意事项：
-#     - 如果容器内没有相应的日志目录，会提示使用 docker-compose logs 命令
-#     - 日志可能通过 Docker 日志驱动输出，而不是文件
-#     - 复制的日志文件可以用于离线分析和长期存储
-#     - 会自动创建本地日志目录（如果不存在）
-#     - 复制成功后会显示文件列表和大小
-#
 copy_logs_from_container() {
     echo "请选择要复制日志的容器:"
     echo "1) web (Django + Gunicorn)"
@@ -359,7 +330,7 @@ copy_logs_from_container() {
             ls -lh ./docker_logs/logs/
         else
             echo "⚠️  容器内没有 /app/logs/ 目录"
-            echo "日志可能通过 Docker 日志驱动输出，请使用 docker-compose logs 命令查看"
+            echo "日志可能通过 Docker 日志驱动输出，请使用 docker compose logs 命令查看"
         fi
     elif [ "$service_name" == "nginx" ]; then
         # Nginx 日志
@@ -375,52 +346,6 @@ copy_logs_from_container() {
         fi
     fi
 }
-
-# ==========================================================
-# 主程序逻辑
-# ==========================================================
-#
-# 功能说明：
-#     主循环提供交互式菜单界面，根据用户选择调用相应的日志查看功能
-#     支持实时日志查看、历史日志查看、日志搜索、容器管理等操作
-#
-# 工作流程：
-#     1. 显示主菜单
-#     2. 等待用户输入选项
-#     3. 根据选项调用相应的函数
-#     4. 执行完成后等待用户按 Enter 继续
-#     5. 清屏并返回主菜单
-#     6. 重复上述步骤，直到用户选择退出
-#
-# 菜单选项说明：
-#     0) 退出 - 退出日志查看工具
-#     1) Web 服务实时日志 - 查看 Django + Gunicorn 的实时日志
-#     2) Worker 服务实时日志 - 查看 Django Q 的实时日志
-#     3) Nginx 服务实时日志 - 查看 Nginx 的实时日志
-#     4) 所有服务实时日志 - 同时查看所有服务的实时日志
-#     5) Web 服务最近 100 行 - 查看 Django + Gunicorn 的最近 100 行日志
-#     6) Worker 服务最近 100 行 - 查看 Django Q 的最近 100 行日志
-#     7) Nginx 服务最近 100 行 - 查看 Nginx 的最近 100 行日志
-#     8) 搜索所有服务日志 - 在所有服务日志中搜索关键词
-#     9) 查看容器状态 - 显示所有容器的运行状态
-#     10) 进入容器内部查看日志 - 进入容器内部执行命令
-#     11) 从容器复制日志文件到本地 - 将容器日志复制到本地目录
-#
-# 使用方法：
-#     1. 运行脚本: bash view_docker_logs.sh
-#     2. 根据菜单提示输入选项编号
-#     3. 按照提示完成操作
-#     4. 按 Enter 返回主菜单
-#     5. 选择 0 退出工具
-#
-# 注意事项：
-#     - 需要在 docker-compose.yml 所在目录执行
-#     - 确保容器正在运行
-#     - 某些操作可能需要容器内存在相应的日志目录
-#     - 使用 Ctrl+C 可以退出实时日志查看
-#     - 无效选项会提示重新选择
-#
-# ==========================================================
 
 # 主循环
 while true; do
@@ -442,7 +367,7 @@ while true; do
             echo "正在查看所有服务实时日志"
             echo "按 Ctrl+C 退出"
             echo "============================================================"
-            docker-compose logs -f --tail=50
+            docker compose logs -f --tail=50
             ;;
         5)
             show_recent_logs "web" "Web 服务" 100
