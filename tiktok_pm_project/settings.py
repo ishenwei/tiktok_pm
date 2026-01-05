@@ -266,3 +266,9 @@ PRODUCT_MEDIA_DOWNLOAD_ROOT = os.getenv(
 )
 
 N8N_WEBHOOK_OPTIMIZE_PRODUCT_URL = os.environ.get("N8N_WEBHOOK_OPTIMIZE_PRODUCT_URL")
+
+# ==========================================================
+# 日志配置
+# ==========================================================
+
+from logging_config import LOGGING

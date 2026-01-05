@@ -259,9 +259,11 @@ def _extract_product_data(product):
 def update_product_api(request):
     API_SECRET = settings.N8N_API_SECRET
     logger.info(f"API_SECRET: {API_SECRET}")
+
     try:
         data = json.loads(request.body)
         logger.debug(f"data: {data}")
+
         if data.get("api_key") != API_SECRET:
             return JsonResponse({"status": "error", "message": "Unauthorized"}, status=403)
 
@@ -300,6 +302,7 @@ def update_product_api(request):
             output_data = None
             if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
                 output_data = data[0].get("output")
+                
             elif isinstance(data, dict) and "output" in data:
                 output_data = data.get("output")
             else:
