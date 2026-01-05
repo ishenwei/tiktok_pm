@@ -213,7 +213,7 @@ def n8n_analyze_view(request, product_id):
                 messages.success(request, f"✅ AI 优化成功！已更新: {', '.join(updated_fields)}")
             else:
                 messages.warning(
-                    request, "⚠️ n8n 返回成功，但没有包含有效的 desc_1 或 desc_2 字段。"
+                    request, "⚠️ n8n 调用成功，请稍后刷新页面查看内容。"
                 )
         else:
             messages.error(
