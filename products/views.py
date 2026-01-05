@@ -296,10 +296,26 @@ def update_product_api(request):
             # 建议：只删除该产品同类型的旧草稿，保留不同模型的对比数据
             AIContentItem.objects.filter(product=product, status="draft").delete()
 
+            # 从 n8n 返回的 JSON 结构中提取 output 数据
+            output_data = None
+            if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
+                output_data = data[0].get("output")
+            elif isinstance(data, dict) and "output" in data:
+                output_data = data.get("output")
+            else:
+                output_data = data
+
+            logger.debug(f"output_data extracted: {output_data}")
+
             def create_items(data_list_zh, data_list_en, type_key):
                 # -------------------------------------------------------
                 # 修复逻辑：兼容 String 和 List
                 # -------------------------------------------------------
+
+                # 添加详细日志
+                logger.debug(f"create_items called - Type: {type_key}")
+                logger.debug(f"  data_list_zh type: {type(data_list_zh)}, value: {data_list_zh}")
+                logger.debug(f"  data_list_en type: {type(data_list_en)}, value: {data_list_en}")
 
                 # 处理中文输入
                 if isinstance(data_list_zh, list):
@@ -322,10 +338,10 @@ def update_product_api(request):
                 # -------------------------------------------------------
 
                 length = max(len(zh_list), len(en_list))
-                logger.debug(f"Type: {type_key}, Length: {length}")
+                logger.debug(f"Type: {type_key}, Length: {length}, zh_list length: {len(zh_list)}, en_list length: {len(en_list)}")
 
                 for i in range(length):
-                    AIContentItem.objects.create(
+                    created_item = AIContentItem.objects.create(
                         product=product,
                         ai_model=model_used,
                         content_type=type_key,
@@ -334,13 +350,25 @@ def update_product_api(request):
                         content_zh=zh_list[i] if i < len(zh_list) else "",
                         content_en=en_list[i] if i < len(en_list) else "",
                     )
+                    logger.debug(f"Created AIContentItem - ID: {created_item.id}, Type: {type_key}, Index: {i + 1}")
 
             # 映射字段（需与 n8n 节点的输出 JSON 匹配）
-            create_items(data.get("desc_zh"), data.get("desc_en"), "desc")
-            create_items(data.get("script_zh"), data.get("script_en"), "script")
-            create_items(data.get("voice_zh"), data.get("voice_en"), "voice")
-            create_items(data.get("img_p_zh"), data.get("img_p_en"), "img_prompt")
-            create_items(data.get("vid_p_zh"), data.get("vid_p_en"), "vid_prompt")
+            # 使用 output_data 而不是 data，因为 n8n 返回的是 [{"output": {...}}]
+            logger.debug(f"output_data keys: {output_data.keys() if output_data else 'None'}")
+            logger.debug(f"desc_zh: {output_data.get('desc_zh')}")
+            logger.debug(f"desc_en: {output_data.get('desc_en')}")
+            logger.debug(f"script_zh: {output_data.get('script_zh')}")
+            logger.debug(f"script_en: {output_data.get('script_en')}")
+            logger.debug(f"voice_zh: {output_data.get('voice_zh')}")
+            logger.debug(f"voice_en: {output_data.get('voice_en')}")
+            logger.debug(f"img_p_zh: {output_data.get('img_p_zh')}")
+            logger.debug(f"img_p_en: {output_data.get('img_p_en')}")
+
+            create_items(output_data.get("desc_zh"), output_data.get("desc_en"), "desc")
+            create_items(output_data.get("script_zh"), output_data.get("script_en"), "script")
+            create_items(output_data.get("voice_zh"), output_data.get("voice_en"), "voice")
+            create_items(output_data.get("img_p_zh"), output_data.get("img_p_en"), "img_prompt")
+            create_items(output_data.get("vid_p_zh"), output_data.get("vid_p_en"), "vid_prompt")
 
         return JsonResponse({"status": "success", "model": model_used})
 
