@@ -4,7 +4,7 @@
 # 生产环境日志查看脚本
 # ==========================================================
 
-LOG_DIR="/home/shenwei/Docker/tiktok_pm/logs"
+LOG_DIR="/home/shenwei/docker/tiktok_pm/logs"
 PROJECT_DIR="/path/to/your/project"
 
 # 颜色定义

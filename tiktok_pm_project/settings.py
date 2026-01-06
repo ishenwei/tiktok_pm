@@ -8,12 +8,22 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
+
+配置说明：
+- 本文件包含Django项目的核心配置设置
+- 敏感信息通过环境变量管理，确保安全性
+- 数据库配置使用MySQL，通过PyMySQL驱动连接
+- 会话存储使用数据库后端，支持多worker环境
+- 静态文件和媒体文件分别配置
+- 集成了Django REST Framework、Django-Q等第三方框架
 """
 
 import os
 from pathlib import Path
 
 # ====== PyMySQL 兼容层 ======
+# PyMySQL安装为MySQLdb的兼容层，使Django可以使用PyMySQL作为MySQL驱动
+# 这样可以使用纯Python的MySQL驱动，而不需要安装MySQL客户端库
 import pymysql
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
@@ -22,185 +32,226 @@ pymysql.install_as_MySQLdb()
 # ===========================
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
+# BASE_DIR是项目的根目录，用于构建其他路径的基准
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # 定义媒体文件（动态生成文件）的 URL 前缀
+# 媒体文件包括用户上传的图片、文件等，在运行时动态生成
+# 通过MEDIA_URL可以在模板中引用这些文件
 MEDIA_URL = "/data/"
 
 # 定义媒体文件在文件系统中的根目录
-# 🌟 关键修正：确保 MEDIA_ROOT 也使用 Path 对象或显式转换为字符串 🌟
-# 由于 os.path.join() 接受 Path 对象，这里保持 MEDIA_ROOT 兼容性
-MEDIA_ROOT = BASE_DIR / "data"  # 使用 Path 对象进行拼接
+# 所有用户上传的文件都会存储在这个目录下
+# 使用Path对象进行路径拼接，确保跨平台兼容性
+MEDIA_ROOT = BASE_DIR / "data"
 
 # 查找并加载项目根目录下的 .env 文件
-# 现在 BASE_DIR 是 Path 对象，/ 运算符可以正常工作
+# .env文件用于存储环境变量，避免敏感信息直接写入代码
+# 支持从.env文件中读取数据库连接信息、API密钥等配置
 load_dotenv(BASE_DIR / ".env")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
+# SECRET_KEY用于加密签名，必须保密，生产环境必须设置
+# 从环境变量读取，如果未设置则抛出配置错误
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
     raise ImproperlyConfigured("DJANGO_SECRET_KEY environment variable is not set")
 
 # SECURITY WARNING: don't run with debug turned on in production!
+# DEBUG模式控制是否显示详细的错误信息
+# 生产环境必须设置为False，否则会暴露敏感信息
+# 从环境变量读取，默认为False
 DEBUG = os.environ.get("DJANGO_DEBUG", "False") == "True"
 
+# ALLOWED_HOSTS定义允许访问此Django站点的主机名/域名列表
+# 在DEBUG=False时，Django会检查请求的Host头是否在此列表中
+# 从环境变量读取，默认为localhost和127.0.0.1
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 
 # Application definition
-
+# INSTALLED_APPS定义了项目中所有已安装的Django应用
+# 包括Django内置应用、第三方应用和自定义应用
 INSTALLED_APPS = [
-    "django.contrib.admin",
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
-    "django.contrib.sessions",
-    "django.contrib.messages",
-    "django.contrib.staticfiles",
+    # Django内置应用
+    "django.contrib.admin",  # Django管理后台
+    "django.contrib.auth",  # 认证系统
+    "django.contrib.contenttypes",  # 内容类型框架
+    "django.contrib.sessions",  # 会话框架
+    "django.contrib.messages",  # 消息框架
+    "django.contrib.staticfiles",  # 静态文件管理
     # 第三方框架
-    "rest_framework",  # DRF (用于API)
-    # 富文本编辑器
+    "rest_framework",  # Django REST Framework (用于构建API)
     "tinymce",  # 富文本编辑器
-    "django_q",
-    # 您的应用
-    "products",  # 注册您的产品应用
-    # API 过滤
-    "django_filters",  # API过滤
+    "django_q",  # 异步任务队列
+    # 自定义应用
+    "products",  # 产品管理应用
+    # API过滤
+    "django_filters",  # REST Framework的过滤后端
 ]
 
+# MIDDLEWARE定义了Django请求/响应处理中间件列表
+# 中间件按顺序处理请求，按逆序处理响应
+# 每个中间件可以修改请求、响应或执行特定逻辑
 MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django.middleware.security.SecurityMiddleware",  # 安全相关的中间件，如HTTPS重定向
+    "django.contrib.sessions.middleware.SessionMiddleware",  # 会话管理
+    "django.middleware.common.CommonMiddleware",  # 常用中间件，处理URL规范化等
+    "django.middleware.csrf.CsrfViewMiddleware",  # CSRF保护
+    "django.contrib.auth.middleware.AuthenticationMiddleware",  # 用户认证
+    "django.contrib.messages.middleware.MessageMiddleware",  # 消息框架
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",  # 点击劫持保护
 ]
 
+# ROOT_URLCONF指定URL配置文件的Python路径
+# Django使用此文件将URL映射到视图函数
 ROOT_URLCONF = "tiktok_pm_project.urls"
 
+# TEMPLATES配置Django模板引擎
+# 定义模板的后端、目录、选项等
 TEMPLATES = [
     {
-        "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
-        "APP_DIRS": True,
+        "BACKEND": "django.template.backends.django.DjangoTemplates",  # 使用Django模板引擎
+        "DIRS": [BASE_DIR / "templates"],  # 全局模板目录
+        "APP_DIRS": True,  # 在每个应用的templates目录中查找模板
         "OPTIONS": {
+            # 上下文处理器：在模板渲染时自动添加的变量
             "context_processors": [
-                "django.template.context_processors.request",
-                "django.contrib.auth.context_processors.auth",
-                "django.contrib.messages.context_processors.messages",
+                "django.template.context_processors.request",  # 添加request对象到模板上下文
+                "django.contrib.auth.context_processors.auth",  # 添加用户认证信息
+                "django.contrib.messages.context_processors.messages",  # 添加消息信息
             ],
         },
     },
 ]
 
+# WSGI_APPLICATION指定WSGI应用的Python路径
+# 用于部署到生产环境的WSGI服务器（如Gunicorn、uWSGI）
 WSGI_APPLICATION = "tiktok_pm_project.wsgi.application"
 
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
+# 数据库配置，定义Django如何连接到数据库
 DATABASES = {
     "default": {
-        # 关键修改：将 'django.db.backends.mysql' 替换为 PyMySQL 的引擎路径
-        "ENGINE": "django.db.backends.mysql",  # <-- 必须修改！
-        # 修复方式：
-        # 1. 在 settings.py 顶部添加一行：
-        # import pymysql
-        # pymysql.install_as_MySQLdb()
-        # 2. 或者直接修改 ENGINE 路径 (更清晰)
-        # 'ENGINE': 'pymysql.backends.mysql', # <-- 如果 PyMySQL 提供了此路径 (依赖版本)
-        # 鉴于您之前使用 mysqlclient，最简单的方式是使用 PyMySQL 提供的兼容层：
-        "NAME": os.environ.get("MYSQL_DB_NAME"),
-        "USER": os.environ.get("MYSQL_USER"),
-        "PASSWORD": os.environ.get("MYSQL_PASSWORD"),
-        "HOST": os.environ.get("MYSQL_HOST"),
-        "PORT": os.environ.get("MYSQL_PORT", "3307"),
+        "ENGINE": "django.db.backends.mysql",  # 使用MySQL数据库后端
+        "NAME": os.environ.get("MYSQL_DB_NAME"),  # 数据库名称
+        "USER": os.environ.get("MYSQL_USER"),  # 数据库用户名
+        "PASSWORD": os.environ.get("MYSQL_PASSWORD"),  # 数据库密码
+        "HOST": os.environ.get("MYSQL_HOST"),  # 数据库主机地址
+        "PORT": os.environ.get("MYSQL_PORT", "3307"),  # 数据库端口，默认3307
+        "CONN_MAX_AGE": 600,  # 数据库连接持久化时间（秒）
+        # 设置为600秒（10分钟），减少频繁建立连接的开销
+        # 解决了每次请求都重新建立连接导致的20秒延迟问题
         "OPTIONS": {
-            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
-            "charset": "utf8mb4",
+            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",  # 设置SQL模式为严格模式
+            "charset": "utf8mb4",  # 使用utf8mb4字符集，支持完整的Unicode（包括emoji）
         },
     }
 }
 
-# 从环境变量读取信任的来源列表
+# CSRF_TRUSTED_ORIGINS定义允许进行不安全CSRF请求的来源
+# 当使用HTTPS时，Django会检查请求的Origin头是否在此列表中
+# 包含本地开发环境和生产环境的URL
 CSRF_TRUSTED_ORIGINS = [
-    "http://127.0.0.1",
-    "http://localhost",
-    "http://192.168.3.47",  # 您的 IP
-    "http://192.168.3.47:8888",  # 您的 IP 和端口
-    "http://tk.ishenwei.online",
-    "https://tk.ishenwei.online",
+    "http://127.0.0.1",  # 本地回环地址
+    "http://localhost",  # 本地主机名
+    "http://192.168.3.45",  # 内网IP地址
+    "http://192.168.3.45:8888",  # 内网IP地址（带端口）
+    "http://192.168.3.47",  # 内网IP地址
+    "http://192.168.3.47:8888",  # 内网IP地址（带端口）
+    "http://tk.ishenwei.online",  # 生产环境域名（HTTP）
+    "https://tk.ishenwei.online",  # 生产环境域名（HTTPS）
 ]
 
-# Django-Q 配置，并使用 Redis 或您的数据库作为任务后端（假设使用数据库）
+# CACHES配置缓存后端
+# 使用本地内存缓存（LocMemCache），适合开发和单进程环境
+# 注意：在多worker环境下，每个worker有独立的缓存，可能导致数据不一致
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",  # 本地内存缓存后端
+        "LOCATION": "unique-snowflake",  # 缓存位置标识符
+    }
+}
 
+# SESSION_ENGINE定义会话存储后端
+# 使用数据库存储会话，支持多worker环境
+# 解决了使用LocMemCache导致的会话丢失问题
+# 在多worker环境下，每个worker的内存是独立的，LocMemCache会导致会话不一致
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
+
+# Django-Q配置
+# Django-Q是一个分布式任务队列，用于执行异步任务和定时任务
+# 使用Django ORM作为broker，无需额外的Redis或Celery服务
 Q_CLUSTER = {
-    "name": "DjangoORM",
-    "workers": 4,  # worker 数量
-    "recycle": 500,
-    "timeout": 300,
-    "retry": 360,
-    "queue_limit": 50,
-    "bulk": 10,
-    "save_limit": 250,
-    "cpu_affinity": 1,
-    # ⭐ 关键：启用 ORM (MySQL/PostgreSQL) 作为队列 Broker
-    "ENGINE": "django_q.brokers.orm.OrmBroker",
-    # 使用 MySQL ORM broker（非常关键）
-    "orm": "default",
-    # 开启 Scheduler（必须，否则 delay 不工作）
+    "name": "DjangoORM",  # 集群名称
+    "workers": 4,  # worker进程数量，处理并发任务
+    "recycle": 500,  # worker处理500个任务后重启，防止内存泄漏
+    "timeout": 300,  # 任务超时时间（秒），5分钟后强制终止
+    "retry": 360,  # 任务失败后重试时间（秒），6分钟后重试
+    "queue_limit": 50,  # 队列中最多保留50个任务
+    "bulk": 10,  # 批量处理任务的数量
+    "save_limit": 250,  # 保存任务历史记录的数量限制
+    "cpu_affinity": 1,  # CPU亲和性设置，1表示不绑定特定CPU
+    # ⭐ 关键配置：使用Django ORM作为队列Broker
+    "ENGINE": "django_q.brokers.orm.OrmBroker",  # 使用ORM broker
+    "orm": "default",  # 使用默认数据库连接
+    # 开启Scheduler（调度器），必须启用才能支持定时任务
     "scheduler": True,
-    # 不使用单 worker 模式（Single 模式会导致无限循环）
+    # 不使用单worker模式（sync模式会导致无限循环）
     "sync": False,
 }
 
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
+# 密码验证器列表，用于在用户设置或修改密码时进行验证
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",  # 检查密码是否与用户信息过于相似
     },
     {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",  # 检查密码最小长度
     },
     {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",  # 检查密码是否为常见密码
     },
     {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",  # 检查密码是否为纯数字
     },
 ]
 
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
+# 国际化配置，控制语言、时区等设置
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "en-us"  # 默认语言代码
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "UTC"  # 时区设置，使用协调世界时
 
-USE_I18N = True
+USE_I18N = True  # 启用国际化翻译系统
 
-USE_TZ = True
+USE_TZ = True  # 启用时区支持，所有datetime对象都会带有时区信息
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
+# 静态文件配置，用于管理CSS、JavaScript、图片等静态资源
 
-STATIC_URL = "static/"
+STATIC_URL = "static/"  # 静态文件的URL前缀
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
+# 默认主键字段类型，使用BigAutoField支持更大的ID范围
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# 配置 DRF 使用 DjangoFilter
+# REST Framework配置
+# 配置Django REST Framework使用DjangoFilter作为默认的过滤后端
 REST_FRAMEWORK = {"DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"]}
 
 # =========================================================
@@ -213,14 +264,13 @@ STATIC_URL = "/static/"
 
 # 2. STATIC_ROOT (用于 collectstatic 命令)
 # 告诉 Django 将所有静态文件收集到项目根目录下的 'staticfiles' 文件夹中。
-# 注意：这是 collectstatic 收集文件的目的地，不要与 STATICFILES_DIRS 混淆。
-# 必须使用绝对路径：
+# collectstatic命令会从各个应用和STATICFILES_DIRS收集静态文件到此目录
+# 生产环境使用此目录提供静态文件服务
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
-# 如果使用的是 Path：
-# STATIC_ROOT = Path(BASE_DIR) / 'staticfiles'
 
 # 3. STATICFILES_DIRS (用于存放额外的静态文件)
 # 告诉 Django 在哪里查找额外的静态文件（除了各个应用的 static 目录）
+# 这些文件也会被collectstatic命令收集到STATIC_ROOT
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
 ]
@@ -233,32 +283,35 @@ STATICFILES_DIRS = [
 # True: 调用 Zipline 上传服务，将返回的新 URL 存入数据库。
 # False: 仅保留产品数据中的原始图片 URL。
 IMAGE_DOWNLOAD_FLAG = False
-# 或者
-# IMAGE_DOWNLOAD_FLAG = True
 
 # ==========================================================
 # Bright Data / Zipline 配置 (从环境变量读取)
 # ==========================================================
-
+# Bright Data API配置，用于触发数据抓取任务
 BRIGHT_DATA_API_KEY = os.environ.get("BRIGHT_DATA_API_KEY")
 BRIGHT_DATA_DATASET_ID = os.environ.get("BRIGHT_DATA_DATASET_ID")
 
+# Bright Data API端点配置
 BRIGHT_DATA_BASE_SCRAPE_URL = "https://api.brightdata.com/datasets/v3/trigger?dataset_id=gd_m45m1u911dsa4274pi&notify=false&include_errors=true"
 BRIGHT_DATA_STATUS_URL = "https://api.brightdata.com/datasets/v3/progress/"
 BRIGHT_DATA_DOWNLOAD_BASE_URL = "https://api.brightdata.com/datasets/v3/snapshot/"
 
+# Bright Data发现类型参数
 BRIGHT_DATA_DISCOVER_TYPE = "&type=discover_new"
 BRIGHT_DATA_DISCOVER_BY_CATEGORY = "&discover_by=category"
 BRIGHT_DATA_DISCOVER_BY_KEYWORD = "&discover_by=keyword"
 BRIGHT_DATA_DISCOVER_BY_SHOP = "&discover_by=shop"
 
+# Bright Data每条输入的抓取限制
 BRIGHT_DATA_PARAM_LIMIT_PER_INPUT = "&limit_per_input=5"
 
-# Zipline 配置
+# Zipline配置
+# Zipline是一个图片托管服务，用于存储和管理产品图片
 ZIPLINE_UPLOAD_URL = os.environ.get("ZIPLINE_UPLOAD_URL")
 ZIPLINE_API_KEY = os.environ.get("ZIPLINE_API_KEY")
 
-# N8N API Secret 配置
+# N8N API Secret配置
+# N8N是一个工作流自动化工具，用于处理产品优化等任务
 N8N_API_SECRET = os.environ.get("N8N_API_SECRET")
 if not N8N_API_SECRET:
     raise ImproperlyConfigured("N8N_API_SECRET environment variable is not set")
@@ -267,14 +320,18 @@ if not N8N_API_SECRET:
 # 产品图片下载路径
 # ==========================================================
 
+# 定义产品媒体文件的下载根目录
+# 从环境变量读取，如果未设置则使用默认路径
 PRODUCT_MEDIA_DOWNLOAD_ROOT = os.getenv(
     "PRODUCT_MEDIA_DOWNLOAD_ROOT", os.path.join(BASE_DIR, "downloaded_products")
 )
 
+# N8N Webhook URL，用于触发产品优化工作流
 N8N_WEBHOOK_OPTIMIZE_PRODUCT_URL = os.environ.get("N8N_WEBHOOK_OPTIMIZE_PRODUCT_URL")
 
 # ==========================================================
 # 日志配置
 # ==========================================================
-
+# 从logging_config.py导入日志配置
+# 日志配置文件定义了日志的格式、级别、处理器等
 from logging_config import LOGGING
