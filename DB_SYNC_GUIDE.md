@@ -238,7 +238,7 @@ docker-compose logs -f mariadb
 
 MariaDB容器首次启动时会自动执行初始化脚本 `mariadb/init/01-init.sql`，该脚本会:
 
-- 创建数据库 `tiktok_products_dev`
+- 创建数据库 `tiktok_products`
 - 创建同步日志表 `db_sync_log`
 - 创建同步配置表 `db_sync_config`
 - 插入默认同步配置
