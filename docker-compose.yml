@@ -1,4 +1,5 @@
-# docker-compose.yml - 修正版本
+# docker-compose.yml - 支持开发和生产环境切换
+# 使用 scripts/switch_env.sh 脚本在开发和生产环境之间切换
 version: '3.8'
 
 services:
@@ -22,6 +23,8 @@ services:
       - 8000
     env_file:
       - .env
+    environment:
+      - DJANGO_ENV=${DJANGO_ENV:-development}
 
   # 2. Nginx 反向代理和静态文件服务
   nginx:
@@ -48,6 +51,8 @@ services:
     # 🌟 添加环境变量 🌟
     env_file:
       - .env
+    environment:
+      - DJANGO_ENV=${DJANGO_ENV:-development}
 
     command: python manage.py qcluster
 
@@ -55,6 +60,10 @@ services:
       - web
 
   # 4. 🌟 本地 MariaDB 10 数据库服务 🌟
+  # 数据库名称由环境变量 MARIADB_DATABASE 控制:
+  #   - 开发环境: tiktok_products_dev
+  #   - 生产环境: tiktok_products
+  # 使用 scripts/switch_env.sh 脚本切换环境
   mariadb:
     image: mariadb:10.11
     container_name: tiktok_pm_mariadb
@@ -70,9 +79,10 @@ services:
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./mariadb/init:/docker-entrypoint-initdb.d:ro
+      - ./mariadb/custom-healthcheck.sh:/usr/local/bin/custom-healthcheck.sh:ro
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max_connections=200
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$${MYSQL_ROOT_PASSWORD}"]
+      test: ["CMD", "/usr/local/bin/custom-healthcheck.sh"]
       interval: 10s
       timeout: 5s
       retries: 5
