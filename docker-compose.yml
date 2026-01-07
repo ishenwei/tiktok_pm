@@ -54,7 +54,31 @@ services:
     depends_on:
       - web
 
+  # 4. 🌟 本地 MariaDB 10 数据库服务 🌟
+  mariadb:
+    image: mariadb:10.11
+    container_name: tiktok_pm_mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MARIADB_DATABASE:-tiktok_products_dev}
+      MYSQL_USER: ${MARIADB_USER:-shenwei}
+      MYSQL_PASSWORD: ${MARIADB_PASSWORD:-!Abcde12345}
+      TZ: Asia/Shanghai
+    ports:
+      - "${MARIADB_PORT:-3306}:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./mariadb/init:/docker-entrypoint-initdb.d:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max_connections=200
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 # Docker 卷定义
 volumes:
   static_volume:
   media_volume:
+  mariadb_data:

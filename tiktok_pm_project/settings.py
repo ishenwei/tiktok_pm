@@ -89,6 +89,7 @@ INSTALLED_APPS = [
     "django_q",  # 异步任务队列
     # 自定义应用
     "products",  # 产品管理应用
+    "tiktok_pm_project.db_sync",  # 数据库同步功能
     # API过滤
     "django_filters",  # REST Framework的过滤后端
 ]
@@ -136,23 +137,47 @@ WSGI_APPLICATION = "tiktok_pm_project.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 # 数据库配置，定义Django如何连接到数据库
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.mysql",  # 使用MySQL数据库后端
-        "NAME": os.environ.get("MYSQL_DB_NAME"),  # 数据库名称
-        "USER": os.environ.get("MYSQL_USER"),  # 数据库用户名
-        "PASSWORD": os.environ.get("MYSQL_PASSWORD"),  # 数据库密码
-        "HOST": os.environ.get("MYSQL_HOST"),  # 数据库主机地址
-        "PORT": os.environ.get("MYSQL_PORT", "3307"),  # 数据库端口，默认3307
-        "CONN_MAX_AGE": 600,  # 数据库连接持久化时间（秒）
-        # 设置为600秒（10分钟），减少频繁建立连接的开销
-        # 解决了每次请求都重新建立连接导致的20秒延迟问题
-        "OPTIONS": {
-            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",  # 设置SQL模式为严格模式
-            "charset": "utf8mb4",  # 使用utf8mb4字符集，支持完整的Unicode（包括emoji）
-        },
+# 支持环境切换：通过DB_ENV环境变量选择远程或本地数据库
+DB_ENV = os.environ.get("DB_ENV", "remote").lower()
+
+if DB_ENV == "local":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": os.environ.get("DB_LOCAL_NAME", "tiktok_products_dev"),
+            "USER": os.environ.get("DB_LOCAL_USER", "shenwei"),
+            "PASSWORD": os.environ.get("DB_LOCAL_PASSWORD", "!Abcde12345"),
+            "HOST": os.environ.get("DB_LOCAL_HOST", "mariadb"),
+            "PORT": os.environ.get("DB_LOCAL_PORT", "3306"),
+            "CONN_MAX_AGE": 600,
+            "OPTIONS": {
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+                "charset": "utf8mb4",
+            },
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": os.environ.get("DB_REMOTE_NAME", "tiktok_products_dev"),
+            "USER": os.environ.get("DB_REMOTE_USER", "shenwei"),
+            "PASSWORD": os.environ.get("DB_REMOTE_PASSWORD", "!Abcde12345"),
+            "HOST": os.environ.get("DB_REMOTE_HOST", "192.168.3.17"),
+            "PORT": os.environ.get("DB_REMOTE_PORT", "3307"),
+            "CONN_MAX_AGE": 600,
+            "OPTIONS": {
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+                "charset": "utf8mb4",
+            },
+        }
+    }
+
+# 数据同步配置
+DB_SYNC_ENABLED = os.environ.get("DB_SYNC_ENABLED", "False").lower() == "true"
+DB_SYNC_INTERVAL = int(os.environ.get("DB_SYNC_INTERVAL", "60"))
+DB_SYNC_DIRECTION = os.environ.get("DB_SYNC_DIRECTION", "BOTH")
+DB_SYNC_TYPE = os.environ.get("DB_SYNC_TYPE", "INCREMENTAL")
 
 # CSRF_TRUSTED_ORIGINS定义允许进行不安全CSRF请求的来源
 # 当使用HTTPS时，Django会检查请求的Origin头是否在此列表中
