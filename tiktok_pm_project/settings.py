@@ -359,4 +359,7 @@ N8N_WEBHOOK_OPTIMIZE_PRODUCT_URL = os.environ.get("N8N_WEBHOOK_OPTIMIZE_PRODUCT_
 # ==========================================================
 # 从logging_config.py导入日志配置
 # 日志配置文件定义了日志的格式、级别、处理器等
-from logging_config import LOGGING
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'scripts'))
+from log_tools.logging_config import LOGGING
