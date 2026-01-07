@@ -21,7 +21,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 2. 复制整个项目代码到容器中
 COPY . /app/
 
-# 3. 运行 Django 的收集静态文件命令
+# 3. 设置 Python 路径，确保可以找到 scripts 目录下的模块
+ENV PYTHONPATH=/app/scripts:$PYTHONPATH
+
+# 4. 运行 Django 的收集静态文件命令
 # STATIC_ROOT 路径将被收集到 /app/staticfiles/
 RUN python manage.py collectstatic --noinput
 
