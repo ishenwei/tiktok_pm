@@ -50,6 +50,15 @@ MEDIA_ROOT = BASE_DIR / "data"
 # 支持从.env文件中读取数据库连接信息、API密钥等配置
 load_dotenv(BASE_DIR / ".env")
 
+# ==========================================================
+# 环境检测
+# ==========================================================
+# 检测当前运行环境（开发/生产）
+# 通过DJANGO_ENV环境变量判断，默认为development
+ENVIRONMENT = os.environ.get("DJANGO_ENV", "development").lower()
+IS_PRODUCTION = ENVIRONMENT == "production"
+IS_DEVELOPMENT = ENVIRONMENT == "development"
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -328,7 +337,25 @@ BRIGHT_DATA_DISCOVER_BY_KEYWORD = "&discover_by=keyword"
 BRIGHT_DATA_DISCOVER_BY_SHOP = "&discover_by=shop"
 
 # Bright Data每条输入的抓取限制
-BRIGHT_DATA_PARAM_LIMIT_PER_INPUT = "&limit_per_input=5"
+# 从环境变量读取，根据环境动态设置：
+# - 开发环境：5（用于测试）
+# - 生产环境：50（提高效率）
+# 如果环境变量未设置，则根据当前环境使用默认值
+BRIGHT_DATA_PARAM_LIMIT = os.environ.get("BRIGHT_DATA_PARAM_LIMIT")
+if BRIGHT_DATA_PARAM_LIMIT:
+    try:
+        limit_value = int(BRIGHT_DATA_PARAM_LIMIT)
+        BRIGHT_DATA_PARAM_LIMIT_PER_INPUT = f"&limit_per_input={limit_value}"
+    except (ValueError, TypeError) as e:
+        raise ImproperlyConfigured(
+            f"BRIGHT_DATA_PARAM_LIMIT must be a valid integer. Got: {BRIGHT_DATA_PARAM_LIMIT}. Error: {e}"
+        )
+else:
+    if IS_PRODUCTION:
+        limit_value = 50
+    else:
+        limit_value = 5
+    BRIGHT_DATA_PARAM_LIMIT_PER_INPUT = f"&limit_per_input={limit_value}"
 
 # Zipline配置
 # Zipline是一个图片托管服务，用于存储和管理产品图片
